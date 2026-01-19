@@ -9,12 +9,19 @@ class Article(Base):
     id = Column(Integer, primary_key=True)
     title = Column(Text)
     content = Column(Text)
-    url = Column(Text, unique=True)
+    url = Column(Text)
     publish_date = Column(DateTime)
     source = Column(Text)
     country = Column(Text)
     credibility_score = Column(Float)
     topic_cluster_id = Column(Integer, ForeignKey("truth_clusters.id"))
+    image_url = Column(Text)
+    priority = Column(Text)
+    category = Column(Text)
+    jp_title = Column(Text)
+    jp_content = Column(Text)
+    summary = Column(Text)
+    slug = Column(Text)
 
 class Claim(Base):
     __tablename__ = "claims"

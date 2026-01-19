@@ -2,8 +2,8 @@ import faiss
 import numpy as np
 from db.models import TruthCluster
 
-SIM_THRESHOLD = 0.82
-EMBED_DIM = 1536
+SIM_THRESHOLD = 0.7
+EMBED_DIM = 384
 
 
 def normalize_embedding(embedding) -> np.ndarray:

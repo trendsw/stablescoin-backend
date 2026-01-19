@@ -1,10 +1,10 @@
 import numpy as np
 from ml.clustering.index import ClusterIndex
-
+from ml.services.topic_clustering import EMBED_DIM
 # Global singleton index (production pattern)
-INDEX = ClusterIndex(dim=1536)  # OpenAI embedding size
+INDEX = ClusterIndex(dim=EMBED_DIM)  # OpenAI embedding size
 
-def assign_cluster(embedding, threshold=0.8):
+def assign_cluster(embedding: np.ndarray, threshold=0.8):
     vec = np.asarray(embedding, dtype="float32")
 
     # Ensure shape is (1, dim)

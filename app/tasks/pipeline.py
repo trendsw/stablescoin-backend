@@ -1,7 +1,7 @@
 import asyncio
 from ingestion.scraper import scrape_all_sources
 from ml.embeddings import embed
-from ml.claim_extraction import extract_claims
+from ml.claim_extraction import extract_claims, analyze_article
 from ml.claim_comparison import compare_claims, semantic_group_claims, classify_group, save_supports, update_article_credibility
 from ml.truth_engine import evaluate_truth
 from core.logging import log
@@ -23,12 +23,23 @@ def process_article(article_id: int):
     try:
         article = db.get(Article, article_id)
 
+        if not article:
+            raise ValueError(f"Article {article_id} not found")
+
+        analysis = analyze_article(article.title, article.content)
+        # ---- Assign article fields ----
+        article.priority = analysis["priority"]
+        article.category = analysis["category"]
+        article.jp_title = analysis["ja"]["title"]
+        article.jp_content = analysis["ja"]["content"]
+        article.summary = analysis["summary"]
         embedding = embed(article.content)
         index = get_cluster_index()
 
         cluster_id = assign_topic_cluster(article, embedding, index, db)
 
-        claims_data = extract_claims(article.content)
+        # claims_data = extract_claims(article.content)
+        claims_data = analysis.get("claims", [])
         for c in claims_data:
             db.add(Claim(
                 article_id=article.id,
@@ -38,6 +49,10 @@ def process_article(article_id: int):
             ))
         db.commit()
         return cluster_id
+    except Exception as e:
+        db.rollback()
+        print("PROCESSING ARTICLE ERROR:", repr(e))
+        raise
     finally:
         db.close()
 
@@ -59,7 +74,10 @@ def evaluate_cluster(cluster_id: int):
         )
         print("claims ===>", len(claims))
         if len(claims) < 2:
-            log.info("cluster_skipped_insufficient_claims", cluster_id=cluster_id)
+            db.query(ClaimSupport).filter(
+                ClaimSupport.cluster_id == cluster_id
+            ).delete(synchronize_session=False)
+            db.commit()
             return
         
         db.query(ClaimSupport).filter(
@@ -103,8 +121,8 @@ def evaluate_cluster(cluster_id: int):
             else:
                 truth_claim_ids.update(c.id for c in contradicting)
                 save_supports(db, cluster_id, contradicting, "contradicting")
-
-        update_article_credibility(db, truth_claim_ids)
+        print(f"truth_claims {cluster_id}", truth_claim_ids)
+        update_article_credibility(db, cluster_id, truth_claim_ids)
         
         db.commit()
         #  Uses YOUR logic
@@ -135,27 +153,28 @@ def evaluate_cluster(cluster_id: int):
 async def run_pipeline_async():
     log.info("pipeline_started")
 
-    # articles = await scrape_all_sources()
-    # if not articles:
-    #     log.info("pipeline_no_articles")
-    #     return
+    articles = await scrape_all_sources()
+    if not articles:
+        log.info("pipeline_no_articles")
+        return
 
-    # article_ids = save_articles(articles)
-    # log.info("articles_saved", count=len(article_ids))
+    article_ids = save_articles(articles)
+    print("article ids===>", article_ids)
+    log.info("articles_saved", count=len(article_ids))
 
-    # touched_clusters: set[int] = set()
+    touched_clusters: set[int] = set()
     
-    # for article_id in article_ids:
-    #     try:
-    #         log.info("processing_article_started", article_id=article_id)
-    #         cluster_id = process_article(article_id)
-    #         touched_clusters.add(cluster_id)
-    #     except Exception as e:
-    #         log.error(
-    #             "article_processing_failed",
-    #             article_id=article_id,
-    #             error=str(e)
-    #         )
+    for article_id in article_ids:
+        try:
+            log.info("processing_article_started", article_id=article_id)
+            cluster_id = process_article(article_id)
+            touched_clusters.add(cluster_id)
+        except Exception as e:
+            log.error(
+                "article_processing_failed",
+                article_id=article_id,
+                error=str(e)
+            )
             
     cluster_ids = get_all_cluster_ids()
     
@@ -177,18 +196,25 @@ async def run_pipeline_async():
     )   
     
 
-def run_pipeline():
-    """
-    Synchronous entry point for schedulers / workers.
-    Safely executes async pipeline.
-    """
-    try:
-        asyncio.run(run_pipeline_async())
-    except RuntimeError as e:
-        # Handles case where an event loop already exists (rare but possible)
-        log.warning("event_loop_exists_fallback", error=str(e))
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(run_pipeline_async())
+# def run_pipeline():
+#     """
+#     Synchronous entry point for schedulers / workers.
+#     Safely executes async pipeline.
+#     """
+#     try:
+#         asyncio.run(run_pipeline_async())
+#     except RuntimeError as e:
+#         # Handles case where an event loop already exists (rare but possible)
+#         log.warning("event_loop_exists_fallback", error=str(e))
+#         loop = asyncio.get_event_loop()
+#         loop.run_until_complete(run_pipeline_async())
     
 
 
+def run_pipeline():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(run_pipeline_async())
+    else:
+        asyncio.create_task(run_pipeline_async())

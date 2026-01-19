@@ -1,22 +1,27 @@
 sources:
-  - name: CoinDesk
-    url: https://www.coindesk.com/latest-crypto-news
-    country: US
-    credibility_score: 0.5
-    article_url_patterns:
-      - "/news/"
-      - "/markets/"
-      - "/policy/"
-      - "/tech/"
-      - "/coindesk-indices/"
-
+  # - name: CoinDesk
+  #   url: https://www.coindesk.com/latest-crypto-news
+  #   country: US
+  #   credibility_score: 0.5
+  #   article_url_patterns:
+  #     - "/news/"
+  #     - "/markets/"
+  #     - "/policy/"
+  #     - "/tech/"
+  #     - "/coindesk-indices/"
+  #   image_parent_classes:
+  #     - "figure"
+  #   image_url_patterns:
+  #     - "cdn.sanity.io/images/"
   - name: CoinTelegraph
     url: https://cointelegraph.com/category/latest-news
     country: US
     credibility_score: 0.85
     article_url_patterns:
       - "/news/"
-  
+    image_url_patterns:
+      - "s3.cointelegraph.com/uploads/"
+      - "images.cointelegraph.com" 
   - name: Decrypt
     url: https://decrypt.co/news
     country: US
@@ -29,7 +34,9 @@ sources:
     fetch_strategy: httpx
     credibility_score: 0.65
     article_url_patterns:
-    - "^/[a-z0-9-]+/?$"
+      - "^/[a-z0-9-]+/?$"
+    image_url_patterns:
+      - "assets.beincrypto.com/img/"
   - name: cryptonews
     url: https://cryptonews.com/news/
     country: UK
@@ -37,6 +44,10 @@ sources:
     credibility_score: 0.65
     article_url_patterns:
       - "^/news/[a-z0-9-]+/?$"
+    image_url_patterns:
+      - "cimg.co/wp-content/uploads/"
+    image_parent_classes:
+      - "featured-frame"
 
   - name: blockworks
     url: https://blockworks.co/news
@@ -45,6 +56,8 @@ sources:
     credibility_score: 0.65
     article_url_patterns:
       - "/news/"
+    image_url_patterns:
+      - "blockworks-co.imgix.net/wp-content/uploads/"  
   - name: utoday
     url: https://u.today
     country: UAE
@@ -52,6 +65,8 @@ sources:
     fetch_strategy: httpx
     article_url_patterns:
       - "^/[a-z0-9-]{15,}/?$"
+    image_url_patterns:
+      - "/sites/default/files/styles/"
   - name: coingape
     url: https://coingape.com/category/news/
     country: UAE
@@ -59,7 +74,10 @@ sources:
     fetch_strategy: httpx
     article_url_patterns:
       - "^/[a-z0-9-]{15,}/?$"
-
+    image_url_patterns:
+      - "coingape.com/wp-content/uploads/"
+    image_parent_classes:
+      - "imgthum"
   - name: ambcrypto
     url: https://ambcrypto.com/category/new-news/
     country: INDIA
@@ -67,11 +85,19 @@ sources:
     fetch_strategy: httpx
     article_url_patterns:
       - "^/[a-z0-9-]{15,}/?$"
-  - name: cryptotimes
-    url: https://www.cryptotimes.io/all-news/
-    country: INDIA
-    credibility_score: 0.65
-    fetch_strategy: httpx
-    article_url_patterns:
-      - "^/\\d{4}/\\d{2}/\\d{2}/[a-z0-9-]+/?$"      
+    image_url_patterns:
+      - "ambcrypto.com/wp-content/uploads/"
+    image_parent_classes:
+      - "single-post-image"       
+  # - name: cryptotimes
+  #   url: https://www.cryptotimes.io/all-news/
+  #   country: INDIA
+  #   credibility_score: 0.65
+  #   fetch_strategy: httpx
+  #   article_url_patterns:
+  #     - "^/\\d{4}/\\d{2}/\\d{2}/[a-z0-9-]+/?$"
+  #   image_url_patterns:
+  #     - "www.cryptotimes.io/wp-content/uploads/"
+  #   image_parent_classes:
+  #     - "wp-post-image"      
   
