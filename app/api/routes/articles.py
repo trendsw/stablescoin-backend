@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import text, func, and_, desc
+from sqlalchemy import text, func, and_, desc, or_
 from db.models import Article
 from db.session import get_db
 from db.schemas import ArticleOut, HomeArticlesResponse, PaginatedArticlesOut
@@ -80,6 +80,53 @@ def map_article(article: Article, locale: str) -> ArticleOut:
         source = article.source,
         country= article.country
     )
+
+
+@router.get(
+    "/articles/search",
+    response_model=list[ArticleOut],
+)
+def search_articles(
+    search: str,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    if not search.strip():
+        raise HTTPException(status_code=400, detail="Search query is empty")
+
+    latest_subq = latest_per_slug_subquery(db)
+
+    query = (
+        db.query(Article)
+        .join(
+            latest_subq,
+            and_(
+                Article.slug == latest_subq.c.slug,
+                Article.publish_date == latest_subq.c.max_date,
+            ),
+        )
+        # Exclusions
+        .filter(Article.credibility_score.isnot(None))
+        .filter(Article.credibility_score != 0)
+        .filter(Article.image_url.isnot(None))
+        # Japanese + mixed-language search
+        .filter(
+            or_(
+                Article.jp_title.ilike(f"%{search}%"),
+                Article.title.ilike(f"%{search}%"),
+            )
+        )
+        # Quality ordering
+        .order_by(
+            Article.credibility_score.desc(),
+            Article.publish_date.desc(),
+        )
+        .limit(limit)
+    )
+
+    results = query.all()
+
+    return [serialize_article(a) for a in results]
 
 @router.get("/articles/home", response_model=HomeArticlesResponse)
 def get_home_articles(
@@ -331,12 +378,13 @@ def get_cluster_related_articles(
     base_score = base.credibility_score
     excluded_slugs = {base.slug}
     results: list[Article] = []
-
-    def fetch(query, needed):
+    used_countries: set[str] = set()
+    
+    def fetch(query, needed, exclude_countries: set[str] | None = None):
         if needed <= 0:
             return []
 
-        rows = (
+        q = (
             query
             .join(
                 latest_subq,
@@ -347,12 +395,17 @@ def get_cluster_related_articles(
             )
             .filter(~Article.slug.in_(excluded_slugs))
             .filter(Article.credibility_score.isnot(None))
-            .limit(needed)
-            .all()
         )
+
+        if exclude_countries:
+            q = q.filter(~Article.country.in_(exclude_countries))
+
+        rows = q.limit(needed).all()
 
         for r in rows:
             excluded_slugs.add(r.slug)
+            if r.country:
+                used_countries.add(r.country)
 
         return rows
     
@@ -362,15 +415,15 @@ def get_cluster_related_articles(
             .filter(Article.topic_cluster_id == base.topic_cluster_id)
             .order_by(func.abs(Article.credibility_score - base_score)),
             2 - len(results),
+            used_countries if results else None,
         )
-
-    # 2️⃣ SAME CATEGORY
     if len(results) < 2 and base.category:
         results += fetch(
             db.query(Article)
             .filter(Article.category == base.category)
             .order_by(func.abs(Article.credibility_score - base_score)),
             2 - len(results),
+            used_countries,
         )
 
     # 3️⃣ DIFFERENT COUNTRY
@@ -380,7 +433,9 @@ def get_cluster_related_articles(
             .filter(Article.country != base.country)
             .order_by(func.abs(Article.credibility_score - base_score)),
             2 - len(results),
+            used_countries,
         )
+
 
     # 4️⃣ GLOBAL FALLBACK
     if len(results) < 2:
@@ -388,8 +443,23 @@ def get_cluster_related_articles(
             db.query(Article)
             .order_by(func.abs(Article.credibility_score - base_score)),
             2 - len(results),
+            used_countries,
         )
 
+    if len(results) == 2 and results[0].country == results[1].country:
+        # remove second article
+        excluded_slugs.add(results[1].slug)
+        used_countries = {results[0].country}
+        results = results[:1]
+
+        # force replacement from different country
+        results += fetch(
+            db.query(Article)
+            .filter(Article.country != results[0].country)
+            .order_by(func.abs(Article.credibility_score - base_score)),
+            1,
+            used_countries,
+        )
     return [serialize_article(a) for a in results]
 
 @router.get("/article/latest")
