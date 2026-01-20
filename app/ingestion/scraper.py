@@ -209,21 +209,35 @@ def unwrap_next_image(url: str) -> str:
         return unquote(real[0])
 
     return url
+
 def normalize_image_url(url: str, base_url: str) -> str:
     url = url.strip()
 
+    # 1️⃣ Handle protocol-relative URLs
     if url.startswith("//"):
         url = "https:" + url
     elif url.startswith("/"):
         url = urljoin(base_url, url)
 
-    # Unwrap Next.js / Nuxt / Vercel proxy images
-    url = unwrap_next_image(url)
+    # 2️⃣ Unwrap Next.js / Nuxt / Vercel images
+    parsed = urlparse(url)
+    if "/_next/image" in parsed.path:
+        qs = parse_qs(parsed.query)
+        if "url" in qs:
+            url = unquote(qs["url"][0])
 
-    # CoinTelegraph CDN unwrap
+    # 3️⃣ CoinTelegraph CDN unwrap (optional)
     if "images.cointelegraph.com" in url and "https://" in url:
         url = url[url.rfind("https://"):]
 
+    # --- unwrap Decrypt proxy ---
+    if "img.decrypt.co" in url and "/plain/" in url:
+        url = url.split("/plain/", 1)[1]
+        url = unquote(url)
+
+    # remove @webp
+    if "@webp" in url:
+        url = url.split("@webp", 1)[0]
     return url
 
 def parse_srcset(srcset: str) -> list[str]:
@@ -240,7 +254,6 @@ def parse_srcset(srcset: str) -> list[str]:
     items.sort(reverse=True)
     return [url for _, url in items]
 
-
 def extract_image_from_imgs(
     html: str,
     base_url: str,
@@ -249,26 +262,23 @@ def extract_image_from_imgs(
 ) -> str | None:
 
     soup = BeautifulSoup(html, "lxml")
+    parents = []
 
-    # -------------------------
-    # 1️⃣ Parent selector priority
-    # -------------------------
+    # Collect parent elements
     if parent_classes:
-        for selector in parent_classes:
+        for cls in parent_classes:
+            found = soup.select(f".{cls}")
+            if found:
+                parents.extend(found)
 
-            # allow tag selectors like "figure"
-            if selector.isalpha():
-                parent = soup.find(selector)
-            else:
-                parent = soup.select_one(f".{selector}")
+    # Fallback to entire document
+    if not parents:
+        parents = [soup]
 
-            if not parent:
-                continue
+    candidate_images = []
 
-            img = parent.find("img")
-            if not img:
-                continue
-
+    for parent in parents:
+        for img in parent.find_all("img"):
             src = (
                 img.get("data-src")
                 or img.get("data-lazy-src")
@@ -280,28 +290,177 @@ def extract_image_from_imgs(
 
             src = normalize_image_url(src, base_url)
 
-            if not image_patterns or any(p in src for p in image_patterns):
-                return src
+            # Skip SVGs or logos
+            if src.lower().endswith(".svg") or "/themes/decrypt-media/" in src:
+                continue
 
-    # -------------------------
-    # 2️⃣ Fallback (unchanged)
-    # -------------------------
-    for img in soup.find_all("img"):
-        src = (
-            img.get("data-src")
-            or img.get("data-lazy-src")
-            or img.get("data-original")
-            or img.get("src")
-        )
-        if not src:
-            continue
+            # Must match image_patterns
+            if image_patterns and not any(p in src for p in image_patterns):
+                continue
 
-        src = normalize_image_url(src, base_url)
+            # Try to get image width/height from attributes
+            width = img.get("width")
+            height = img.get("height")
+            size = 0
+            try:
+                size = int(width) * int(height)
+            except (TypeError, ValueError):
+                # fallback to 0 if not available
+                size = 0
 
-        if not image_patterns or any(p in src for p in image_patterns):
-            return src
+            # Check srcset for higher resolution
+            srcset = img.get("srcset")
+            if srcset:
+                # Pick the largest width in srcset
+                matches = re.findall(r"(\S+)\s+(\d+)x", srcset)
+                for m_url, m_w in matches:
+                    try:
+                        m_w = int(m_w)
+                        if m_w > size:
+                            candidate_images.append((m_w, normalize_image_url(m_url, base_url)))
+                    except:
+                        continue
+
+            candidate_images.append((size, src))
+
+    # Return the image with the largest size
+    if candidate_images:
+        # sort by size descending
+        candidate_images.sort(key=lambda x: x[0], reverse=True)
+        return candidate_images[0][1]
 
     return None
+
+# def extract_image_from_imgs(
+#     html: str,
+#     base_url: str,
+#     image_patterns: list[str],
+#     parent_classes: list[str] | None = None,
+# ) -> str | None:
+
+#     soup = BeautifulSoup(html, "lxml")
+#     HTML_TAGS = {"article", "figure", "main", "section", "div"}
+
+#     # -------------------------
+#     # 1️⃣ Parent selector priority
+#     # -------------------------
+#     if parent_classes:
+#         for selector in parent_classes:
+
+#             if selector in HTML_TAGS:
+#                 parent = soup.find(selector)
+#             else:
+#                 parent = soup.select_one(f".{selector}")
+
+#             if not parent:
+#                 continue
+
+#             for img in parent.find_all("img"):
+#                 src = (
+#                     img.get("data-src")
+#                     or img.get("data-lazy-src")
+#                     or img.get("data-original")
+#                     or img.get("src")
+#                 )
+#                 if not src:
+#                     continue
+#                 print("original src=>", src)
+#                 src = normalize_image_url(src, base_url)
+#                 print("normalized src===>", src)
+#                 # ❌ reject SVG / logos
+#                 if src.lower().endswith(".svg"):
+#                     continue
+
+#                 # ❌ reject non-article images
+#                 if image_patterns and not any(p in src for p in image_patterns):
+#                     continue
+
+#                 return src
+
+#         return None
+
+#     # -------------------------
+#     # 2️⃣ Fallback (no parent)
+#     # -------------------------
+#     for img in soup.find_all("img"):
+#         src = (
+#             img.get("data-src")
+#             or img.get("data-lazy-src")
+#             or img.get("data-original")
+#             or img.get("src")
+#         )
+#         if not src:
+#             continue
+
+#         src = normalize_image_url(src, base_url)
+
+#         if image_patterns and not any(p in src for p in image_patterns):
+#             continue
+
+#         return src
+
+#     return None
+# def extract_image_from_imgs(
+#     html: str,
+#     base_url: str,
+#     image_patterns: list[str],
+#     parent_classes: list[str] | None = None,
+# ) -> str | None:
+
+#     soup = BeautifulSoup(html, "lxml")
+
+#     # -------------------------
+#     # 1️⃣ Parent selector priority
+#     # -------------------------
+#     if parent_classes:
+#         for selector in parent_classes:
+
+#             # allow tag selectors like "figure"
+#             if selector.isalpha():
+#                 parent = soup.find(selector)
+#             else:
+#                 parent = soup.select_one(f".{selector}")
+
+#             if not parent:
+#                 continue
+
+#             img = parent.find("img")
+#             if not img:
+#                 continue
+
+#             src = (
+#                 img.get("data-src")
+#                 or img.get("data-lazy-src")
+#                 or img.get("data-original")
+#                 or img.get("src")
+#             )
+#             if not src:
+#                 continue
+
+#             src = normalize_image_url(src, base_url)
+
+#             if not image_patterns or any(p in src for p in image_patterns):
+#                 return src
+
+#     # -------------------------
+#     # 2️⃣ Fallback (unchanged)
+#     # -------------------------
+#     for img in soup.find_all("img"):
+#         src = (
+#             img.get("data-src")
+#             or img.get("data-lazy-src")
+#             or img.get("data-original")
+#             or img.get("src")
+#         )
+#         if not src:
+#             continue
+
+#         src = normalize_image_url(src, base_url)
+
+#         if not image_patterns or any(p in src for p in image_patterns):
+#             return src
+
+#     return None
 
 async def fetch_coindesk_main(url: str) -> str | None:
     async with async_playwright() as p:

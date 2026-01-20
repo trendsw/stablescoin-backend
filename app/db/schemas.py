@@ -12,6 +12,7 @@ class ArticleOut(BaseModel):
     source: str
     url: str
     summary: str
+    country: str
     class Config:
         from_attributes  = True
 

@@ -33,6 +33,7 @@ def process_article(article_id: int):
         article.jp_title = analysis["ja"]["title"]
         article.jp_content = analysis["ja"]["content"]
         article.summary = analysis["summary"]
+        article.title = analysis["new_title"]
         embedding = embed(article.content)
         index = get_cluster_index()
 

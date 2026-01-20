@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import text, func, and_
+from sqlalchemy import text, func, and_, desc
 from db.models import Article
 from db.session import get_db
 from db.schemas import ArticleOut, HomeArticlesResponse, PaginatedArticlesOut
@@ -28,10 +28,10 @@ def serialize_article(a: Article):
         "slug": a.slug,
         "image": a.image_url,
         "url": a.url,
+        "country": a.country,
         "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
         "source": a.source,
         "summary": a.summary or "",
-        "credibility_score": a.credibility_score,
     }
 
 def generate_slug(url: str, title: str) -> str:
@@ -77,7 +77,8 @@ def map_article(article: Article, locale: str) -> ArticleOut:
         slug=article.slug,
         summary= article.summary,
         date=article.publish_date.strftime("%d %b %Y %H:%M"),
-        source = article.source
+        source = article.source,
+        country= article.country
     )
 
 @router.get("/articles/home", response_model=HomeArticlesResponse)
@@ -219,6 +220,7 @@ def get_articles(
                 "image": a.image_url,
                 "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
                 "source": a.source,
+                "country": a.country
             }
             for a in page_articles
         ],
@@ -227,6 +229,39 @@ def get_articles(
         "total": total,
         "total_pages": (total + page_size - 1) // page_size,
     }
+    
+@router.get('/articles/main', response_model=dict)
+def get_main_article(
+    db:Session = Depends(get_db),
+):
+    article = (
+        db.query(Article)
+        .filter(Article.credibility_score > 0)
+        .order_by(
+            desc(Article.credibility_score),
+            desc(Article.publish_date),
+        )
+        .first()
+    )
+    
+    if not article:
+        return None
+    
+    return {
+        "id": article.id,
+        "slug": article.slug,
+        "url": article.url,
+        "title": article.title,
+        "excerpt": article.content,
+        "summary": article.summary,
+        "image": article.image_url,
+        "date": article.publish_date.strftime("%d %b %Y %H:%M"),
+        "source": article.source,
+        "country": article.country,
+        "credibilityScore": article.credibility_score
+    }  
+
+
 @router.get("/articles/featured", response_model=ArticleOut | None)
 def get_featured_article(
     category: Optional[str] = None,
@@ -262,6 +297,7 @@ def get_featured_article(
         "image": article.image_url,
         "date": article.publish_date.strftime("%d %b %Y %H:%M"),
         "source": article.source,
+        "country": article.country
     }
 
 @router.get(

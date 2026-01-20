@@ -52,8 +52,8 @@ def analyze_article(title: str, content: str) -> Dict[str, Any]:
     - Keep meaning accurate
     - Use natural Japanese news style
 
-    5. Summarize content in 3–4 sentences.
-
+    5. Summarize content in 3–4 sentences in Japanese.
+    6. Generate new title of Summarized content in Japanese.
     OUTPUT FORMAT (STRICT JSON):
     {
       "priority": "...",
@@ -69,7 +69,8 @@ def analyze_article(title: str, content: str) -> Dict[str, Any]:
         "title": "...",
         "content": "..."
       },
-      "summary": "..."
+      "summary": "...",
+      "new_title": "..."
     }
     """
 

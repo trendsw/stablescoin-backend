@@ -28,6 +28,11 @@ sources:
     credibility_score: 0.7
     article_url_patterns:
       - "^/\\d+/"
+    image_url_patterns:
+       - "img.decrypt.co/insecure/"
+       - "cdn.decrypt.co/wp-content/uploads/"
+    image_parent_classes:
+      - "relative"
   - name: beincrypto
     url: https://beincrypto.com/category/
     country: UK
@@ -37,6 +42,8 @@ sources:
       - "^/[a-z0-9-]+/?$"
     image_url_patterns:
       - "assets.beincrypto.com/img/"
+    image_parent_classes:
+      - "cjRkXs"
   - name: cryptonews
     url: https://cryptonews.com/news/
     country: UK
