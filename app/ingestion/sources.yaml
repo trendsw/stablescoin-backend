@@ -21,7 +21,10 @@ sources:
       - "/news/"
     image_url_patterns:
       - "s3.cointelegraph.com/uploads/"
-      - "images.cointelegraph.com" 
+      - "images.cointelegraph.com"
+    image_extensions:
+      - jpg 
+
   - name: Decrypt
     url: https://decrypt.co/news
     country: US
@@ -33,6 +36,10 @@ sources:
        - "cdn.decrypt.co/wp-content/uploads/"
     image_parent_classes:
       - "relative"
+    image_extensions:
+      - jpg
+      - png 
+
   - name: beincrypto
     url: https://beincrypto.com/category/
     country: UK
@@ -44,6 +51,9 @@ sources:
       - "assets.beincrypto.com/img/"
     image_parent_classes:
       - "cjRkXs"
+    url_restriction:
+      - "/bonus_hunter"
+
   - name: cryptonews
     url: https://cryptonews.com/news/
     country: UK
@@ -55,6 +65,8 @@ sources:
       - "cimg.co/wp-content/uploads/"
     image_parent_classes:
       - "featured-frame"
+    image_extensions:
+      - jpg
 
   - name: blockworks
     url: https://blockworks.co/news
@@ -64,7 +76,10 @@ sources:
     article_url_patterns:
       - "/news/"
     image_url_patterns:
-      - "blockworks-co.imgix.net/wp-content/uploads/"  
+      - "blockworks-co.imgix.net/wp-content/uploads/"
+    image_parent_classes:
+      - "w-full"
+
   - name: utoday
     url: https://u.today
     country: UAE
@@ -74,6 +89,10 @@ sources:
       - "^/[a-z0-9-]{15,}/?$"
     image_url_patterns:
       - "/sites/default/files/styles/"
+    image_extensions:
+      - jpg.webp
+      - jpeg.webp
+
   - name: coingape
     url: https://coingape.com/category/news/
     country: UAE
@@ -85,6 +104,11 @@ sources:
       - "coingape.com/wp-content/uploads/"
     image_parent_classes:
       - "imgthum"
+    image_extensions:
+      - jpg
+      - webp
+      - png 
+
   - name: ambcrypto
     url: https://ambcrypto.com/category/new-news/
     country: INDIA
@@ -95,7 +119,10 @@ sources:
     image_url_patterns:
       - "ambcrypto.com/wp-content/uploads/"
     image_parent_classes:
-      - "single-post-image"       
+      - "single-post-image"
+    image_extensions:
+      - jpg
+      - webp        
   # - name: cryptotimes
   #   url: https://www.cryptotimes.io/all-news/
   #   country: INDIA

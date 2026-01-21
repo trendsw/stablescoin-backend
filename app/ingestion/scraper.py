@@ -1,7 +1,7 @@
 import httpx
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin, urlparse, parse_qs, unquote
 
 from bs4 import BeautifulSoup
@@ -18,6 +18,7 @@ from api.routes.articles import generate_slug
 # -------------------------
 logger = logging.getLogger(__name__)
 
+MIN_CONTENT_LENGTH = 200
 
 # -------------------------
 # HTTP fetch (server-safe)
@@ -93,6 +94,9 @@ async def fetch_html_browser(url: str) -> str:
         await browser.close()
         return html    
 
+
+    
+    
 def discover_article_urls(html: str, base_url: str, patterns: list[str]) -> list[str]:
     soup = BeautifulSoup(html, "lxml")
     domain = urlparse(base_url).netloc
@@ -126,36 +130,6 @@ def discover_article_urls(html: str, base_url: str, patterns: list[str]) -> list
     logger.info("Discovered %d article URLs from %s", len(urls), base_url)
     return list(urls)
 
-# -------------------------
-# Normalize publish dates
-# -------------------------
-# def normalize_date(raw_date: str | None) -> datetime | None:
-#     if not raw_date:
-#         return None
-
-#     raw = raw_date.lower().strip()
-#     now = datetime.utcnow()
-
-#     match = re.search(r"(\d+)\s*(minute|min|hour|day|week|month)s?\s*ago", raw)
-#     if match:
-#         value = int(match.group(1))
-#         unit = match.group(2)
-
-#         if unit.startswith("min"):
-#             return now - timedelta(minutes=value)
-#         if unit.startswith("hour"):
-#             return now - timedelta(hours=value)
-#         if unit.startswith("day"):
-#             return now - timedelta(days=value)
-#         if unit.startswith("week"):
-#             return now - timedelta(weeks=value)
-#         if unit.startswith("month"):
-#             return now - timedelta(days=value * 30)
-
-#     try:
-#         return date_parser.parse(raw, fuzzy=True)
-#     except Exception:
-#         return None
 
 def normalize_date(raw_date: str | None) -> datetime | None:
     if not raw_date:
@@ -254,13 +228,37 @@ def parse_srcset(srcset: str) -> list[str]:
     items.sort(reverse=True)
     return [url for _, url in items]
 
+def is_valid_image_url(
+    url: str,
+    allowed_extensions: list[str] | None,
+) -> bool:
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+
+    # If extensions are configured → enforce them
+    if allowed_extensions:
+        for ext in allowed_extensions:
+            if path.endswith("." + ext):
+                return True
+
+        # No extension → ACCEPT (important)
+        if "." not in path.rsplit("/", 1)[-1]:
+            return True
+
+        # Has extension but not allowed → reject
+        return False
+
+    # No extension rules → accept everything
+    return True
+
 def extract_image_from_imgs(
     html: str,
     base_url: str,
     image_patterns: list[str],
     parent_classes: list[str] | None = None,
+    image_extensions: list[str] | None = None,
 ) -> str | None:
-
+    
     soup = BeautifulSoup(html, "lxml")
     parents = []
 
@@ -289,6 +287,12 @@ def extract_image_from_imgs(
                 continue
 
             src = normalize_image_url(src, base_url)
+
+            if not is_valid_image_url(
+                src,
+                image_extensions,
+            ):
+                continue
 
             # Skip SVGs or logos
             if src.lower().endswith(".svg") or "/themes/decrypt-media/" in src:
@@ -331,136 +335,6 @@ def extract_image_from_imgs(
 
     return None
 
-# def extract_image_from_imgs(
-#     html: str,
-#     base_url: str,
-#     image_patterns: list[str],
-#     parent_classes: list[str] | None = None,
-# ) -> str | None:
-
-#     soup = BeautifulSoup(html, "lxml")
-#     HTML_TAGS = {"article", "figure", "main", "section", "div"}
-
-#     # -------------------------
-#     # 1️⃣ Parent selector priority
-#     # -------------------------
-#     if parent_classes:
-#         for selector in parent_classes:
-
-#             if selector in HTML_TAGS:
-#                 parent = soup.find(selector)
-#             else:
-#                 parent = soup.select_one(f".{selector}")
-
-#             if not parent:
-#                 continue
-
-#             for img in parent.find_all("img"):
-#                 src = (
-#                     img.get("data-src")
-#                     or img.get("data-lazy-src")
-#                     or img.get("data-original")
-#                     or img.get("src")
-#                 )
-#                 if not src:
-#                     continue
-#                 print("original src=>", src)
-#                 src = normalize_image_url(src, base_url)
-#                 print("normalized src===>", src)
-#                 # ❌ reject SVG / logos
-#                 if src.lower().endswith(".svg"):
-#                     continue
-
-#                 # ❌ reject non-article images
-#                 if image_patterns and not any(p in src for p in image_patterns):
-#                     continue
-
-#                 return src
-
-#         return None
-
-#     # -------------------------
-#     # 2️⃣ Fallback (no parent)
-#     # -------------------------
-#     for img in soup.find_all("img"):
-#         src = (
-#             img.get("data-src")
-#             or img.get("data-lazy-src")
-#             or img.get("data-original")
-#             or img.get("src")
-#         )
-#         if not src:
-#             continue
-
-#         src = normalize_image_url(src, base_url)
-
-#         if image_patterns and not any(p in src for p in image_patterns):
-#             continue
-
-#         return src
-
-#     return None
-# def extract_image_from_imgs(
-#     html: str,
-#     base_url: str,
-#     image_patterns: list[str],
-#     parent_classes: list[str] | None = None,
-# ) -> str | None:
-
-#     soup = BeautifulSoup(html, "lxml")
-
-#     # -------------------------
-#     # 1️⃣ Parent selector priority
-#     # -------------------------
-#     if parent_classes:
-#         for selector in parent_classes:
-
-#             # allow tag selectors like "figure"
-#             if selector.isalpha():
-#                 parent = soup.find(selector)
-#             else:
-#                 parent = soup.select_one(f".{selector}")
-
-#             if not parent:
-#                 continue
-
-#             img = parent.find("img")
-#             if not img:
-#                 continue
-
-#             src = (
-#                 img.get("data-src")
-#                 or img.get("data-lazy-src")
-#                 or img.get("data-original")
-#                 or img.get("src")
-#             )
-#             if not src:
-#                 continue
-
-#             src = normalize_image_url(src, base_url)
-
-#             if not image_patterns or any(p in src for p in image_patterns):
-#                 return src
-
-#     # -------------------------
-#     # 2️⃣ Fallback (unchanged)
-#     # -------------------------
-#     for img in soup.find_all("img"):
-#         src = (
-#             img.get("data-src")
-#             or img.get("data-lazy-src")
-#             or img.get("data-original")
-#             or img.get("src")
-#         )
-#         if not src:
-#             continue
-
-#         src = normalize_image_url(src, base_url)
-
-#         if not image_patterns or any(p in src for p in image_patterns):
-#             return src
-
-#     return None
 
 async def fetch_coindesk_main(url: str) -> str | None:
     async with async_playwright() as p:
@@ -485,6 +359,17 @@ async def fetch_coindesk_main(url: str) -> str | None:
     main_tag = soup.find("main")
     return str(main_tag) if main_tag else None
 
+
+def is_recent(publish_date, days: int = 2) -> bool:
+    if not publish_date:
+        return None
+    
+    if publish_date.tzinfo is None:
+        publish_date = publish_date.replace(tzinfo=timezone.utc)
+    
+    now = datetime.now(timezone.utc)
+    return publish_date >= (now-timedelta(days=days))
+
 async def extract_article(url: str) -> dict | None:
     
     if "coindesk.com" in url:
@@ -504,11 +389,13 @@ async def extract_article(url: str) -> dict | None:
         include_tables=False
     )
 
-    if not text:
+    if not text or len(text.strip()) < MIN_CONTENT_LENGTH:
         return None
 
     publish_date = normalize_date(metadata.date if metadata else None)
     
+    if not is_recent(publish_date, days=10):
+       return None 
 
     return {
         "title": metadata.title if metadata else None,
@@ -516,6 +403,15 @@ async def extract_article(url: str) -> dict | None:
         "publish_date": publish_date.isoformat() if publish_date else None,
         "url": metadata.url if metadata and metadata.url else url,
     }
+
+def is_url_restricted(url:str, source: dict) -> bool:
+    restrictions = source.get("url_restriction")
+    if not restrictions:
+        return False
+    
+    return any(restricted in url for restricted in restrictions)
+
+
 
 
 # @retry(
@@ -567,9 +463,14 @@ async def scrape_all_sources() -> list[dict]:
         # ---- article loop ----
         for url in article_urls:
             try:
+                if is_url_restricted(url, source):
+                    continue
+                
                 article = await extract_article(url)
+                
                 if not article:
                     continue
+                
                 if source["name"] == "CoinDesk":
                     article_html = await fetch_html_browser(url)
                 else:
@@ -579,7 +480,8 @@ async def scrape_all_sources() -> list[dict]:
                     html=article_html,
                     base_url=url,
                     image_patterns=source.get("image_url_patterns", []),
-                    parent_classes=source.get("image_parent_classes"),  # ⭐ NEW
+                    parent_classes=source.get("image_parent_classes"),
+                    image_extensions=source.get("image_extensions"),
                 )
                 # print("parent_classes", source.get("image_parent_classes"))
                 print("image_url===>", image_url)
