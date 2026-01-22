@@ -19,6 +19,7 @@ from api.routes.articles import generate_slug
 logger = logging.getLogger(__name__)
 
 MIN_CONTENT_LENGTH = 200
+JST = timezone(timedelta(hours=9))
 
 # -------------------------
 # HTTP fetch (server-safe)
@@ -136,7 +137,7 @@ def normalize_date(raw_date: str | None) -> datetime | None:
         return None
 
     raw = raw_date.lower().strip()
-    now = datetime.utcnow().replace(microsecond=0)
+    now = datetime.now(JST).replace(microsecond=0)
 
     # Relative time
     match = re.search(
@@ -167,6 +168,11 @@ def normalize_date(raw_date: str | None) -> datetime | None:
     try:
         # IMPORTANT: inject time if missing
         dt = date_parser.parse(raw, fuzzy=True, default=now)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=JST)
+        else:
+            dt = dt.astimezone(JST)
+            
         return dt.replace(microsecond=0)
     except Exception:
         return None
