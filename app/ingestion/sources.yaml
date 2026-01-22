@@ -1,18 +1,4 @@
 sources:
-  # - name: CoinDesk
-  #   url: https://www.coindesk.com/latest-crypto-news
-  #   country: US
-  #   credibility_score: 0.5
-  #   article_url_patterns:
-  #     - "/news/"
-  #     - "/markets/"
-  #     - "/policy/"
-  #     - "/tech/"
-  #     - "/coindesk-indices/"
-  #   image_parent_classes:
-  #     - "figure"
-  #   image_url_patterns:
-  #     - "cdn.sanity.io/images/"
   - name: CoinTelegraph
     url: https://cointelegraph.com/category/latest-news
     country: US
@@ -25,6 +11,19 @@ sources:
     image_extensions:
       - jpg 
 
+  - name: CryptoNews
+    url: https://crypto.news/news/
+    country: Seychelles
+    credibility_score: 0.85
+    article_url_patterns:
+      - "^/[a-z0-9-]+/?$"
+    image_url_patterns:
+      - "media.crypto.news/"
+      - "crypto.news/app/uploads"
+    image_extensions:
+      - webp
+    image_parent_classes:
+      - "post-detail__media" 
   - name: Decrypt
     url: https://decrypt.co/news
     country: US
@@ -123,15 +122,5 @@ sources:
     image_extensions:
       - jpg
       - webp        
-  # - name: cryptotimes
-  #   url: https://www.cryptotimes.io/all-news/
-  #   country: INDIA
-  #   credibility_score: 0.65
-  #   fetch_strategy: httpx
-  #   article_url_patterns:
-  #     - "^/\\d{4}/\\d{2}/\\d{2}/[a-z0-9-]+/?$"
-  #   image_url_patterns:
-  #     - "www.cryptotimes.io/wp-content/uploads/"
-  #   image_parent_classes:
-  #     - "wp-post-image"      
+ 
   
