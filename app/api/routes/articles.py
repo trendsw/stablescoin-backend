@@ -124,7 +124,7 @@ def map_article(article: Article, locale: str) -> ArticleOut:
 
     return ArticleOut(
         id=article.id,
-        title=title,
+        title=article.title,
         excerpt=content,
         url= article.url,
         image=article.image_url or "",

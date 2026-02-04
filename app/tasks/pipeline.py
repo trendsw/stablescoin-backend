@@ -13,6 +13,9 @@ from ingestion.persist import save_articles
 from tenacity import retry, stop_after_attempt, wait_exponential
 from db.helpers import get_all_cluster_ids
 from ingestion.sources import SOURCE_CREDIBILITY_MAP
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(min=1, max=10),
@@ -34,6 +37,8 @@ def process_article(article_id: int):
         article.jp_content = analysis["ja"]["content"]
         article.summary = analysis["summary"]
         article.title = analysis["new_title"]
+        article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
+
         embedding = embed(article.content)
         index = get_cluster_index()
 
