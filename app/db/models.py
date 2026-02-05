@@ -20,7 +20,9 @@ class Article(Base):
     category = Column(Text)
     jp_title = Column(Text)
     jp_content = Column(Text)
-    summary = Column(Text)                                                                                                    
+    summary = Column(Text)
+    slug = Column(Text)
+                                                                                                        
 
 class Claim(Base):
     __tablename__ = "claims"

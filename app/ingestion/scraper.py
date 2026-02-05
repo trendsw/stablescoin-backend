@@ -418,7 +418,102 @@ def is_url_restricted(url:str, source: dict) -> bool:
     return any(restricted in url for restricted in restrictions)
 
 
+async def scrape_videos() -> list[dict]:
+    sources = load_sources()
+    all_articles: list[dict] = []
 
+    for source in sources:
+        logger.info("Scraping source: %s", source["name"])
+
+        try:
+            if source["name"] == "KhaleejTimes":
+                BASE_URL = "https://www.khaleejtimes.com"
+                results = []
+
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        args=["--no-sandbox"]
+                    )
+                    context = await browser.new_context()
+                    page = await context.new_page()
+
+                    await page.goto(
+                        BASE_URL,
+                        wait_until="domcontentloaded",
+                        timeout=30000
+                    )
+
+                    await page.wait_for_selector("div.vid-box", timeout=15000)
+                    await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    await page.wait_for_timeout(1500)
+                    boxes = await page.query_selector_all("div.vid-box")
+
+                    # ✅ EXTRACT DATA WHILE PAGE IS ALIVE
+                    for box in boxes:
+                        title_el = await box.query_selector("h4 a")
+                        img_el = await box.query_selector("figure img")
+                        
+                        if not title_el:
+                            continue
+                        
+                        title = (await title_el.inner_text()).strip()
+                        href = urljoin(BASE_URL, await title_el.get_attribute("href"))
+                        
+                        image_url = None
+                        
+                        if img_el:
+                            try:
+                                await page.wait_for_function(
+                                    """img => 
+                                        img.src &&
+                                        !img.src.includes('fallbackPlaceholder')
+                                    """,
+                                    img_el,
+                                    timeout=8000
+                                )
+                                image_url = await img_el.get_attribute("src")
+                            except:
+                                # fallback (still better than placeholder)
+                                image_url = await img_el.get_attribute("src")
+                       
+                        # image_url = await img_el.get_attribute("src") if img_el else None
+
+                        results.append({
+                            "title": title,
+                            "href": href,
+                            "image": image_url,
+                        })
+
+                    await context.close()
+                    await browser.close()
+
+                # 🔹 NOW process articles (outside Playwright)
+                for item in results:
+                    article = await extract_article(item["href"])
+
+                    video_article = {
+                        "name": source["name"],
+                        "country": source["country"],
+                        "credibility_score": source["credibility_score"],
+                        "image_url": item["image"],
+                        "title": item["title"],
+                        "url": item["href"],
+                        "content": article.get("content", "") if article else "",
+                        "publish_date": article.get("publish_date", "") if article else "",
+                    }
+
+                    all_articles.append(video_article)
+
+        except Exception as e:
+            logger.error(
+                "Video scraping failed: %s",
+                str(e),
+                exc_info=True
+            )
+            continue
+
+    return all_articles
 
 # @retry(
 #     stop=stop_after_attempt(3),

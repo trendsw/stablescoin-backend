@@ -1,5 +1,5 @@
 import asyncio
-from ingestion.scraper import scrape_all_sources
+from ingestion.scraper import scrape_all_sources, scrape_videos
 from ml.embeddings import embed
 from ml.claim_extraction import extract_claims, analyze_article
 from ml.claim_comparison import compare_claims, semantic_group_claims, classify_group, save_supports, update_article_credibility
@@ -15,7 +15,13 @@ from db.helpers import get_all_cluster_ids
 from ingestion.sources import SOURCE_CREDIBILITY_MAP
 from datetime import datetime
 from zoneinfo import ZoneInfo
-
+from db.cloud_svg import CertificateData, upload_certificate_svg, generate_certificate_svg
+from db.firebase import add_uhalisi_post
+from db.gasFee import gas_fee_calculate
+from db.pricing import get_token_price_on_chain
+from db.utils import generate_transaction_hash, calculate_required_tokens
+from db.transfer import transfer_token_by_wallet, get_ip_token_address
+import os
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(min=1, max=10),
@@ -38,7 +44,53 @@ def process_article(article_id: int):
         article.summary = analysis["summary"]
         article.title = analysis["new_title"]
         article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
+        
+        data = CertificateData(
+            post_id="post123",
+            title="Blockchain Verified Digital Asset Ownership Certificate",
+            description="This content is cryptographically verified and registered on-chain.",
+            poster_wallet="0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24",
+            timestamp=datetime.utcnow().isoformat(),
+            tx_hash="0x9f8c1f42b6e12345abcd67890fedcba0987654321"
+            )
 
+        svg = generate_certificate_svg(data)
+
+        cert_url = upload_certificate_svg(
+                svg,
+                public_id=f"certificate_{data.post_id}"
+        )
+
+        print(cert_url)
+        ip_price = get_token_price_on_chain(os.getenv("IP_ONCHAIN_TOKEN_ADDRESS"))
+        gas = gas_fee_calculate(os.getenv("FROM_ADDRESS"), os.getenv("TO_ADDRESS"))
+
+        required_ip = calculate_required_tokens(0.5, ip_price["priceUsd"])
+        tx_hash = generate_transaction_hash()
+        
+        ip_token_address = get_ip_token_address()
+        
+        result = transfer_token_by_wallet(
+            from_wallet=os.getenv("FROM_ADDRESS"),
+            to_wallet=os.getenv("TO_ADDRESS"),
+            token_address=ip_token_address,
+            amount=required_ip,
+        )
+        
+        post_id = add_uhalisi_post(
+            cert_url=cert_url,
+            commission_fee=0.5,
+            content=analysis["summary"],
+            description=article.content,
+            poster="dfs_0xc313b83f5c446db28c9352e67e784b4619735ec3",
+            payment_method="credit_card",
+            post_type="text",
+            title=analysis["new_title"],
+            tx_hash=tx_hash,
+            stripe_session_id="cs_test_a1ZBJKlEqExCLQguWzP5wZ2CxXhNFtOHWoI8fZQLo1XRemCy4XtOt4RdLm"
+        )
+        
+        
         embedding = embed(article.content)
         index = get_cluster_index()
 
@@ -157,8 +209,9 @@ def evaluate_cluster(cluster_id: int):
         db.close()
         
 async def run_pipeline_async():
-    log.info("pipeline_started")
-
+    # log.info("pipeline_started")
+    # video_articles = await scrape_videos();
+    # print("scrapped video_articles=====>", video_articles)
     articles = await scrape_all_sources()
     if not articles:
         log.info("pipeline_no_articles")
@@ -202,25 +255,25 @@ async def run_pipeline_async():
     )   
     
 
-# def run_pipeline():
-#     """
-#     Synchronous entry point for schedulers / workers.
-#     Safely executes async pipeline.
-#     """
-#     try:
-#         asyncio.run(run_pipeline_async())
-#     except RuntimeError as e:
-#         # Handles case where an event loop already exists (rare but possible)
-#         log.warning("event_loop_exists_fallback", error=str(e))
-#         loop = asyncio.get_event_loop()
-#         loop.run_until_complete(run_pipeline_async())
+def run_pipeline():
+    """
+    Synchronous entry point for schedulers / workers.
+    Safely executes async pipeline.
+    """
+    try:
+        asyncio.run(run_pipeline_async())
+    except RuntimeError as e:
+        # Handles case where an event loop already exists (rare but possible)
+        log.warning("event_loop_exists_fallback", error=str(e))
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(run_pipeline_async())
     
 
 
-def run_pipeline():
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        asyncio.run(run_pipeline_async())
-    else:
-        asyncio.create_task(run_pipeline_async())
+# def run_pipeline():
+#     try:
+#         loop = asyncio.get_running_loop()
+#     except RuntimeError:
+#         asyncio.run(run_pipeline_async())
+#     else:
+        # asyncio.create_task(run_pipeline_async())

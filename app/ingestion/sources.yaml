@@ -11,117 +11,116 @@ sources:
     image_extensions:
       - jpg 
 
-  # - name: CryptoNews
-  #   url: https://crypto.news/news/
-  #   country: Seychelles
-  #   credibility_score: 0.865
-  #   article_url_patterns:
-  #     - "^/[a-z0-9-]+/?$"
-  #   image_url_patterns:
-  #     - "media.crypto.news/"
-  #     - "crypto.news/app/uploads"
-  #   image_extensions:
-  #     - webp
-  #   image_parent_classes:
-  #     - "post-detail__media" 
+  - name: CryptoNews
+    url: https://crypto.news/news/
+    country: Seychelles
+    credibility_score: 0.865
+    article_url_patterns:
+      - "^/[a-z0-9-]+/?$"
+    image_url_patterns:
+      - "media.crypto.news/"
+      - "crypto.news/app/uploads"
+    image_extensions:
+      - webp
+    image_parent_classes:
+      - "post-detail__media" 
       
-  # - name: Decrypt
-  #   url: https://decrypt.co/news
-  #   country: US
-  #   credibility_score: 0.867
-  #   article_url_patterns:
-  #     - "^/\\d+/"
-  #   image_url_patterns:
-  #      - "img.decrypt.co/insecure/"
-  #      - "cdn.decrypt.co/wp-content/uploads/"
-  #   image_parent_classes:
-  #     - "relative"
-  #   image_extensions:
-  #     - jpg
-  #     - png 
+  - name: Decrypt
+    url: https://decrypt.co/news
+    country: US
+    credibility_score: 0.867
+    article_url_patterns:
+      - "^/\\d+/"
+    image_url_patterns:
+       - "img.decrypt.co/insecure/"
+       - "cdn.decrypt.co/wp-content/uploads/"
+    image_parent_classes:
+      - "relative"
+    image_extensions:
+      - jpg
+      - png 
 
-  # - name: beincrypto
-  #   url: https://beincrypto.com/category/
-  #   country: UK
-  #   fetch_strategy: httpx
-  #   credibility_score: 0.861
-  #   article_url_patterns:
-  #     - "^/[a-z0-9-]+/?$"
-  #   image_url_patterns:
-  #     - "assets.beincrypto.com/img/"
-  #   image_parent_classes:
-  #     - "cjRkXs"
-  #   url_restriction:
-  #     - "/bonus_hunter"
+  - name: beincrypto
+    url: https://beincrypto.com/category/
+    country: UK
+    fetch_strategy: httpx
+    credibility_score: 0.861
+    article_url_patterns:
+      - "^/[a-z0-9-]+/?$"
+    image_url_patterns:
+      - "assets.beincrypto.com/img/"
+    image_parent_classes:
+      - "cjRkXs"
+    url_restriction:
+      - "/bonus_hunter"
 
-  # - name: cryptonews
-  #   url: https://cryptonews.com/news/
-  #   country: UK
-  #   fetch_strategy: httpx
-  #   credibility_score: 0.868
-  #   article_url_patterns:
-  #     - "^/news/[a-z0-9-]+/?$"
-  #   image_url_patterns:
-  #     - "cimg.co/wp-content/uploads/"
-  #   image_parent_classes:
-  #     - "featured-frame"
-  #   image_extensions:
-  #     - jpg
+  - name: cryptonews
+    url: https://cryptonews.com/news/
+    country: UK
+    fetch_strategy: httpx
+    credibility_score: 0.868
+    article_url_patterns:
+      - "^/news/[a-z0-9-]+/?$"
+    image_url_patterns:
+      - "cimg.co/wp-content/uploads/"
+    image_parent_classes:
+      - "featured-frame"
+    image_extensions:
+      - jpg
 
-  # - name: blockworks
-  #   url: https://blockworks.co/news
-  #   country: UK
-  #   fetch_strategy: httpx
-  #   credibility_score: 0.869
-  #   article_url_patterns:
-  #     - "/news/"
-  #   image_url_patterns:
-  #     - "blockworks-co.imgix.net/wp-content/uploads/"
-  #   image_parent_classes:
-  #     - "w-full"
+  - name: blockworks
+    url: https://blockworks.co/news
+    country: UK
+    fetch_strategy: httpx
+    credibility_score: 0.869
+    article_url_patterns:
+      - "/news/"
+    image_url_patterns:
+      - "blockworks-co.imgix.net/wp-content/uploads/"
+    image_parent_classes:
+      - "w-full"
 
-  # - name: utoday
-  #   url: https://u.today
-  #   country: UAE
-  #   credibility_score: 0.868
-  #   fetch_strategy: httpx
-  #   article_url_patterns:
-  #     - "^/[a-z0-9-]{15,}/?$"
-  #   image_url_patterns:
-  #     - "/sites/default/files/styles/"
-  #   image_extensions:
-  #     - jpg.webp
-  #     - jpeg.webp
+  - name: utoday
+    url: https://u.today
+    country: UAE
+    credibility_score: 0.868
+    fetch_strategy: httpx
+    article_url_patterns:
+      - "^/[a-z0-9-]{15,}/?$"
+    image_url_patterns:
+      - "/sites/default/files/styles/"
+    image_extensions:
+      - jpg.webp
+      - jpeg.webp
 
-  # - name: coingape
-  #   url: https://coingape.com/category/news/
-  #   country: UAE
-  #   credibility_score: 0.886
-  #   fetch_strategy: httpx
-  #   article_url_patterns:
-  #     - "^/[a-z0-9-]{15,}/?$"
-  #   image_url_patterns:
-  #     - "coingape.com/wp-content/uploads/"
-  #   image_parent_classes:
-  #     - "imgthum"
-  #   image_extensions:
-  #     - jpg
-  #     - webp
-  #     - png 
+  - name: coingape
+    url: https://coingape.com/category/news/
+    country: UAE
+    credibility_score: 0.886
+    fetch_strategy: httpx
+    article_url_patterns:
+      - "^/[a-z0-9-]{15,}/?$"
+    image_url_patterns:
+      - "coingape.com/wp-content/uploads/"
+    image_parent_classes:
+      - "imgthum"
+    image_extensions:
+      - jpg
+      - webp
+      - png 
 
-  # - name: ambcrypto
-  #   url: https://ambcrypto.com/category/new-news/
-  #   country: INDIA
-  #   credibility_score: 0.889
-  #   fetch_strategy: httpx
-  #   article_url_patterns:
-  #     - "^/[a-z0-9-]{15,}/?$"
-  #   image_url_patterns:
-  #     - "ambcrypto.com/wp-content/uploads/"
-  #   image_parent_classes:
-  #     - "single-post-image"
-  #   image_extensions:
-  #     - jpg
-  #     - webp        
-  
+  - name: ambcrypto
+    url: https://ambcrypto.com/category/new-news/
+    country: INDIA
+    credibility_score: 0.889
+    fetch_strategy: httpx
+    article_url_patterns:
+      - "^/[a-z0-9-]{15,}/?$"
+    image_url_patterns:
+      - "ambcrypto.com/wp-content/uploads/"
+    image_parent_classes:
+      - "single-post-image"
+    image_extensions:
+      - jpg
+      - webp        
   
