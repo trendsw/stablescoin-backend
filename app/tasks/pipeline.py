@@ -16,12 +16,16 @@ from ingestion.sources import SOURCE_CREDIBILITY_MAP
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from db.cloud_svg import CertificateData, upload_certificate_svg, generate_certificate_svg
-from db.firebase import add_uhalisi_post
+from db.firebase import add_uhalisi_post, add_transaction, db, get_profile_by_email_or_wallet
 from db.gasFee import gas_fee_calculate
 from db.pricing import get_token_price_on_chain
-from db.utils import generate_transaction_hash, calculate_required_tokens
+from db.utils import generate_transaction_hash, calculate_required_tokens, calculate_block_number
 from db.transfer import transfer_token_by_wallet, get_ip_token_address
 import os
+import firebase_admin
+from firebase_admin import credentials, firestore
+import uuid
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(min=1, max=10),
@@ -44,13 +48,13 @@ def process_article(article_id: int):
         article.summary = analysis["summary"]
         article.title = analysis["new_title"]
         article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
-        
+        post_id = str(uuid.uuid4())
         data = CertificateData(
-            post_id="post123",
-            title="Blockchain Verified Digital Asset Ownership Certificate",
-            description="This content is cryptographically verified and registered on-chain.",
+            post_id=post_id,
+            title=analysis["new_title"],
+            description=analysis["summary"],
             poster_wallet="0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(ZoneInfo("Asia/Tokyo")).isoformat(),
             tx_hash="0x9f8c1f42b6e12345abcd67890fedcba0987654321"
             )
 
@@ -89,8 +93,35 @@ def process_article(article_id: int):
             tx_hash=tx_hash,
             stripe_session_id="cs_test_a1ZBJKlEqExCLQguWzP5wZ2CxXhNFtOHWoI8fZQLo1XRemCy4XtOt4RdLm"
         )
-        
-        
+        firebase_db = firestore.client()
+        from_user = get_profile_by_email_or_wallet("dfs_0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24")
+        to_user = get_profile_by_email_or_wallet("dfs_0x8aaa0fbdcc8ca4bed440e9f13576732061cd044d")
+        fromEmail = from_user.get("email", "")
+        toEmail = to_user.get("email", "")
+        blockNumber = calculate_block_number()
+        token_ref = firebase_db.collection("tokens")
+        query = token_ref.where("symbol", "==", "IP").limit(1)
+        results = query.get()
+        if results:
+            token_doc = results[0]
+            
+        else:
+            print("there is no IP token data")
+        print("token ID===>", token_doc.id)
+        tokenData = token_doc.to_dict()
+        token = {
+            "id" : token_doc.id,
+            "logoUrl" : tokenData.get("logoUrl", ""),
+            "name" : tokenData.get("name", ""),
+            "symbol" : tokenData.get("symbol", ""),
+            "tokenAddress" : tokenData.get("tokenAddress", "")
+        }
+        transaction_id = add_transaction(float(required_ip), blockNumber, "dfs_0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24", fromEmail, float(gas["gasFeeInDfs"]), float(gas["gasFeeInUsd"]), "dfs_0x8aaa0fbdcc8ca4bed440e9f13576732061cd044d", toEmail, token, tx_hash)
+        print("token data===>", token_doc)
+        print("fromEmail:", fromEmail)
+        print("toEmial:", toEmail)
+        print("blockNumber:", blockNumber)
+        print("transaction result:", transaction_id)
         embedding = embed(article.content)
         index = get_cluster_index()
 

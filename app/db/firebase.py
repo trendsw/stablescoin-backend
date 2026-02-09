@@ -78,3 +78,41 @@ def add_uhalisi_post(
     doc_ref.set(data)
     print(f"Added post with ID: {doc_ref.id}")
     return doc_ref.id
+
+def add_transaction(
+    amount: float,
+    blockNumber: int,
+    fromAddress: str,
+    fromEmail: str,
+    gasFee: float,
+    gasFeeInUsd: float,
+    toAddress: str,
+    toEmail: str,
+    token: dict,
+    transactionHash: str
+   
+):
+   doc_ref = db.collection("transactions").document()
+   data = {
+       "amount": amount,
+       "blockNumber": blockNumber,
+       "createdAt": firestore.SERVER_TIMESTAMP,
+       "fromAddress": fromAddress,
+       "fromEmail": fromEmail,
+       "gasFee": gasFee,
+       "gasFeeInUsd": gasFeeInUsd,
+       "message": "Uhalisi Post for Stablescoin",
+       "method": "Transfer",
+       "paymentMethod": "",
+       "roomId": "",
+       "status": "",
+       "toAddress": toAddress,
+       "toEmail": toEmail,
+       "token": token,
+       "transactionHash": transactionHash,
+       "type": "" 
+   }
+   doc_ref.set(data)
+   print(f"transaction id {doc_ref.id}")
+   return doc_ref.id
+    
