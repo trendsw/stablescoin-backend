@@ -49,13 +49,15 @@ def process_article(article_id: int):
         article.title = analysis["new_title"]
         article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
         post_id = str(uuid.uuid4())
+        tx_hash = generate_transaction_hash()
+        article.transaction_hash = tx_hash
         data = CertificateData(
             post_id=post_id,
             title=analysis["new_title"],
             description=analysis["summary"],
             poster_wallet="0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24",
             timestamp=datetime.now(ZoneInfo("Asia/Tokyo")).isoformat(),
-            tx_hash="0x9f8c1f42b6e12345abcd67890fedcba0987654321"
+            tx_hash=tx_hash
             )
 
         svg = generate_certificate_svg(data)
@@ -70,7 +72,7 @@ def process_article(article_id: int):
         gas = gas_fee_calculate(os.getenv("FROM_ADDRESS"), os.getenv("TO_ADDRESS"))
 
         required_ip = calculate_required_tokens(0.5, ip_price["priceUsd"])
-        tx_hash = generate_transaction_hash()
+        
         
         ip_token_address = get_ip_token_address()
         
@@ -214,24 +216,7 @@ def evaluate_cluster(cluster_id: int):
         update_article_credibility(db, cluster_id, truth_claim_ids)
         
         db.commit()
-        #  Uses YOUR logic
-        #comparisons = compare_claims(claims)
 
-        # for claim_id, support_type in comparisons:
-        #     db.add(ClaimSupport(
-        #         cluster_id=cluster_id,
-        #         claim_id=claim_id,
-        #         support_type=support_type,
-        #     ))
-
-        # articles = (
-        #     db.query(Article)
-        #     .filter(Article.topic_cluster_id == cluster_id)
-        #     .all()
-        # )
-
-        # evaluate_truth(cluster, claims, articles, db)
-        # db.commit()
     except Exception as e:
         db.rollback()
         print("CLUSTER EVALUATION ERROR:", repr(e))
@@ -240,9 +225,7 @@ def evaluate_cluster(cluster_id: int):
         db.close()
         
 async def run_pipeline_async():
-    # log.info("pipeline_started")
-    # video_articles = await scrape_videos();
-    # print("scrapped video_articles=====>", video_articles)
+ 
     articles = await scrape_all_sources()
     if not articles:
         log.info("pipeline_no_articles")
@@ -266,11 +249,11 @@ async def run_pipeline_async():
                 error=str(e)
             )
             
-    cluster_ids = get_all_cluster_ids()
+    #cluster_ids = get_all_cluster_ids()
     
-    log.info("evaluating_all_clusters", count=len(cluster_ids))
+    log.info("evaluating_all_clusters", count=len(touched_clusters))
     
-    for cluster_id in cluster_ids:
+    for cluster_id in touched_clusters:
         try:
             log.info("evaluating_cluster_started", cluster_id=cluster_id)
             evaluate_cluster(cluster_id)
@@ -282,7 +265,7 @@ async def run_pipeline_async():
 
     log.info(
         "pipeline_completed",
-        cluster_count=len(cluster_ids)
+        cluster_count=len(touched_clusters)
     )   
     
 

@@ -13,6 +13,7 @@ class ArticleOut(BaseModel):
     url: str
     summary: str
     country: str
+    transaction_hash: str
     class Config:
         from_attributes  = True
 

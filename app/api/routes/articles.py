@@ -71,6 +71,7 @@ def serialize_article(a: Article):
         "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
         "source": a.source,
         "summary": a.summary or "",
+        "transactionHash" : a.transaction_hash
     }
 
 def serialize_article_ja(a: Article):
@@ -85,7 +86,8 @@ def serialize_article_ja(a: Article):
         "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
         "source": a.source,
         "summary": a.summary or "",
-        "credibilityScore": a.credibility_score
+        "credibilityScore": a.credibility_score,
+        "transactionHash" : a.transaction_hash
     }
     
 def generate_slug(url: str, title: str) -> str:
@@ -132,7 +134,8 @@ def map_article(article: Article, locale: str) -> ArticleOut:
         summary= article.summary,
         date=article.publish_date.strftime("%d %b %Y %H:%M"),
         source = article.source,
-        country= article.country
+        country= article.country,
+        transactionHash = article.transaction_hash
     )
 
 
@@ -312,6 +315,7 @@ def get_articles(
                 "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
                 "source": a.source,
                 "country": a.country,
+                "transactionHash": a.transaction_hash
             }
             for a in articles
         ],
@@ -366,7 +370,8 @@ def get_featured_article(
         "image": article.image_url,
         "date": article.publish_date.strftime("%d %b %Y %H:%M"),
         "source": article.source,
-        "country": article.country
+        "country": article.country,
+        "transactionHash": article.transaction_hash
     }
 
 @router.get(
