@@ -20,13 +20,7 @@ def call_llm(system_prompt: str, user_text: str) -> Any:
     if provider== "openai":
         client = OpenAI(api_key=OPENAI_API_KEY)
         MODEL = "gpt-4o-mini"
-    else:
-        client = OpenAI(
-            api_key=os.getenv("DEEPSEEK_KEY"),
-            base_url="https://api.deepseek.com"
-        )
-        MODEL = "deepseek-chat"
-    response = client.chat.completions.create(
+        response = client.chat.completions.create(
         model=MODEL,
         temperature=0.1,
         messages=[
@@ -44,6 +38,32 @@ def call_llm(system_prompt: str, user_text: str) -> Any:
             },
         ],
     )
+    else:
+        client = OpenAI(
+            api_key=os.getenv("DEEPSEEK_KEY"),
+            base_url="https://api.deepseek.com"
+        )
+        MODEL = "deepseek-chat"
+        response = client.chat.completions.create(
+        model=MODEL,
+        temperature=0.1,
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an information extraction engine. "
+                    "Always respond with valid JSON only. "
+                    "Do not include explanations or markdown."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"{system_prompt}\n\nTEXT:\n{user_text}",
+            },
+        ],
+    )
+
 
     content = response.choices[0].message.content.strip()
 
