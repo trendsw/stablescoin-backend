@@ -22,7 +22,7 @@ class Article(Base):
     jp_content = Column(Text)
     summary = Column(Text)
     slug = Column(Text)
-    transaction_hash = Column(Text)
+    uhalisi_id = Column(Text)
                                                                                                         
 
 class Claim(Base):

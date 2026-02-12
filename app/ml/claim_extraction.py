@@ -66,8 +66,40 @@ def analyze_article(title: str, content: str) -> Dict[str, Any]:
     3. JAPANESE NEWS ARTICLE GENERATION
     ────────────────────────
 
-    Translate and rewrite the article into a readable Japanese newspaper-style article.
+    Generate a NEW, enriched Japanese newspaper-style article based on the original content.
 
+    This is NOT a direct translation task.
+    It is a professional newsroom rewrite.
+
+    REQUIREMENTS:
+
+    1. Preserve all factual information from the original article.
+    2. You may reorganize structure for clarity and impact.
+    3. Add journalistic depth including:
+      - Background context (past events, industry trends, regulatory environment)
+      - Explanation of why the event matters
+      - Market or industry implications
+      - Possible short-term and long-term impact
+    4. If the topic relates to markets or crypto:
+      - Mention relevant macro environment if appropriate
+      - Explain investor sentiment where supported by the article
+    5. Do NOT fabricate new facts, numbers, quotes, or events.
+    6. Do NOT invent unnamed sources.
+    7. You may add neutral explanatory context if it is general knowledge.
+    8. Avoid speculation unless clearly labeled as analysis.
+
+    Tone:
+    - Analytical and authoritative
+    - Similar to 日本経済新聞 feature reporting
+    - Calm, structured, professional
+
+    Structure:
+    - Strong headline
+    - Lead paragraph summarizing key development
+    - Followed by background/context
+    - Then implications and analysis
+    - Conclude with forward-looking perspective
+    
     STRICT RULES (MUST FOLLOW ALL):
 
     Writing style:
@@ -134,7 +166,11 @@ def analyze_article(title: str, content: str) -> Dict[str, Any]:
       翻訳・編集　コインテレグラフジャパン
 
     ────────────────────────
-    4. SUMMARY GENERATION
+    4. transalte content of article in japanese. 
+    it must be correct gramatically.
+    ────────────────────────
+    ────────────────────────
+    5. SUMMARY GENERATION
     ────────────────────────
 
     Generate:
@@ -142,7 +178,7 @@ def analyze_article(title: str, content: str) -> Dict[str, Any]:
     - A concise new Japanese headline for the summary
 
     ────────────────────────
-    5. OUTPUT FORMAT (STRICT JSON ONLY)
+    6. OUTPUT FORMAT (STRICT JSON ONLY)
     ────────────────────────
 
     Return ONLY valid JSON.
@@ -163,6 +199,7 @@ def analyze_article(title: str, content: str) -> Dict[str, Any]:
         "title": "...",
         "content": "..."
       },
+      "ja_content": "",
       "summary": "...",
       "new_title": "..."
     }

@@ -50,7 +50,6 @@ def process_article(article_id: int):
         article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
         post_id = str(uuid.uuid4())
         tx_hash = generate_transaction_hash()
-        article.transaction_hash = tx_hash
         data = CertificateData(
             post_id=post_id,
             title=analysis["new_title"],
@@ -86,8 +85,8 @@ def process_article(article_id: int):
         post_id = add_uhalisi_post(
             cert_url=cert_url,
             commission_fee=0.5,
-            content=analysis["summary"],
-            description=article.content,
+            content=analysis["ja"]["content"],
+            description= analysis["ja_content"],
             poster="dfs_0xc313b83f5c446db28c9352e67e784b4619735ec3",
             payment_method="credit_card",
             post_type="text",
@@ -95,6 +94,8 @@ def process_article(article_id: int):
             tx_hash=tx_hash,
             stripe_session_id="cs_test_a1ZBJKlEqExCLQguWzP5wZ2CxXhNFtOHWoI8fZQLo1XRemCy4XtOt4RdLm"
         )
+        article.uhalisi_id = post_id
+
         firebase_db = firestore.client()
         from_user = get_profile_by_email_or_wallet("dfs_0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24")
         to_user = get_profile_by_email_or_wallet("dfs_0x8aaa0fbdcc8ca4bed440e9f13576732061cd044d")
