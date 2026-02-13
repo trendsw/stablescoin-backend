@@ -156,6 +156,8 @@ def search_articles(
     articles = (
         db.query(RankedArticle)
         .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .filter(
             or_(
                 RankedArticle.jp_title.ilike(f"%{search}%"),
@@ -184,6 +186,8 @@ def get_home_articles(
     articles = (
         db.query(RankedArticle)
         .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .order_by(
             RankedArticle.publish_date.desc(),
             RankedArticle.credibility_score.desc(),
@@ -213,6 +217,8 @@ def get_article_counts(db: Session = Depends(get_db)):
     priority_counts = (
         db.query(RankedArticle.priority, func.count(RankedArticle.id))
         .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .group_by(RankedArticle.priority)
         .all()
     )
@@ -248,6 +254,8 @@ def get_breaking_articles(
         db.query(RankedArticle)
         .filter(ranked_sq.c.rn == 1)
         .filter(RankedArticle.priority == "breaking")
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .order_by(
             RankedArticle.publish_date.desc(),
             RankedArticle.credibility_score.desc(),
@@ -272,6 +280,8 @@ def get_articles(
     base_query = (
         db.query(RankedArticle)
         .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
     )
 
     # Optional filters
@@ -337,6 +347,8 @@ def get_featured_article(
     query = (
         db.query(RankedArticle)
         .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
     )
 
     if category:
