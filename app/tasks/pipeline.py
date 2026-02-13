@@ -1,7 +1,7 @@
 import asyncio
 from ingestion.scraper import scrape_all_sources, scrape_videos
 from ml.embeddings import embed
-from ml.claim_extraction import extract_claims, analyze_article
+from ml.claim_extraction import extract_claims, analyze_article, extract_info
 from ml.claim_comparison import compare_claims, semantic_group_claims, classify_group, save_supports, update_article_credibility
 from ml.truth_engine import evaluate_truth
 from core.logging import log
@@ -48,83 +48,7 @@ def process_article(article_id: int):
         article.summary = analysis["summary"]
         article.title = analysis["new_title"]
         article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
-        post_id = str(uuid.uuid4())
-        tx_hash = generate_transaction_hash()
-        data = CertificateData(
-            post_id=post_id,
-            title=analysis["new_title"],
-            description=analysis["summary"],
-            poster_wallet="0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24",
-            timestamp=datetime.now(ZoneInfo("Asia/Tokyo")).isoformat(),
-            tx_hash=tx_hash
-            )
-
-        svg = generate_certificate_svg(data)
-
-        cert_url = upload_certificate_svg(
-                svg,
-                public_id=f"certificate_{data.post_id}"
-        )
-
-        print(cert_url)
-        ip_price = get_token_price_on_chain(os.getenv("IP_ONCHAIN_TOKEN_ADDRESS"))
-        gas = gas_fee_calculate(os.getenv("FROM_ADDRESS"), os.getenv("TO_ADDRESS"))
-
-        required_ip = calculate_required_tokens(0.5, ip_price["priceUsd"])
         
-        
-        ip_token_address = get_ip_token_address()
-        
-        result = transfer_token_by_wallet(
-            from_wallet=os.getenv("FROM_ADDRESS"),
-            to_wallet=os.getenv("TO_ADDRESS"),
-            token_address=ip_token_address,
-            amount=required_ip,
-        )
-        
-        post_id = add_uhalisi_post(
-            cert_url=cert_url,
-            commission_fee=0.5,
-            content=analysis["ja"]["content"],
-            description= analysis["ja_content"],
-            poster="dfs_0xc313b83f5c446db28c9352e67e784b4619735ec3",
-            payment_method="credit_card",
-            post_type="text",
-            title=analysis["new_title"],
-            tx_hash=tx_hash,
-            stripe_session_id="cs_test_a1ZBJKlEqExCLQguWzP5wZ2CxXhNFtOHWoI8fZQLo1XRemCy4XtOt4RdLm"
-        )
-        article.uhalisi_id = post_id
-
-        firebase_db = firestore.client()
-        from_user = get_profile_by_email_or_wallet("dfs_0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24")
-        to_user = get_profile_by_email_or_wallet("dfs_0x8aaa0fbdcc8ca4bed440e9f13576732061cd044d")
-        fromEmail = from_user.get("email", "")
-        toEmail = to_user.get("email", "")
-        blockNumber = calculate_block_number()
-        token_ref = firebase_db.collection("tokens")
-        query = token_ref.where("symbol", "==", "IP").limit(1)
-        results = query.get()
-        if results:
-            token_doc = results[0]
-            
-        else:
-            print("there is no IP token data")
-        print("token ID===>", token_doc.id)
-        tokenData = token_doc.to_dict()
-        token = {
-            "id" : token_doc.id,
-            "logoUrl" : tokenData.get("logoUrl", ""),
-            "name" : tokenData.get("name", ""),
-            "symbol" : tokenData.get("symbol", ""),
-            "tokenAddress" : tokenData.get("tokenAddress", "")
-        }
-        transaction_id = add_transaction(float(required_ip), blockNumber, "dfs_0xe8646b5fa4bcd037b322dfe50a6f2b10bcc9ea24", fromEmail, float(gas["gasFeeInDfs"]), float(gas["gasFeeInUsd"]), "dfs_0x8aaa0fbdcc8ca4bed440e9f13576732061cd044d", toEmail, token, tx_hash)
-        print("token data===>", token_doc)
-        print("fromEmail:", fromEmail)
-        print("toEmial:", toEmail)
-        print("blockNumber:", blockNumber)
-        print("transaction result:", transaction_id)
         embedding = embed(article.content)
         index = get_cluster_index()
 
