@@ -205,19 +205,7 @@ async def run_pipeline_async():
     print("article ids===>", article_ids)
     log.info("articles_saved", count=len(article_ids))
 
-    
-    for article_id in article_ids:
-        try:
-           log.info("processing_article_started", article_id=article_id)
-           cluster_id = process_article(article_id)
-           touched_clusters.add(cluster_id)
-        except Exception as e:
-            log.error(
-                "article_processing_failed",
-                article_id=article_id,
-                error=str(e)
-            )
-            
+               
     touched_clusters: set[int] = set()
     
     for article_id in article_ids:
