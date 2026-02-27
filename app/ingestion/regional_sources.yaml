@@ -1,0 +1,535 @@
+sources:
+  - name: AsahiNews
+    url: https://www.asahi.com/area/hokkaido/
+    country: Hokkaido
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+  
+  - name: AsahiNews
+    url: https://www.asahi.com/area/aomori/
+    country: Aomori
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+  
+  - name: AsahiNews
+    url: https://www.asahi.com/area/iwate/
+    country: Iwate
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/miyagi/
+    country: Miyagi
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/akita/
+    country: Akita
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/yamagata/
+    country: Yamagata
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/fukushima/
+    country: Fukushima
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/ibaraki/
+    country: Ibaraki
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/tochigi/
+    country: Tochigi
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/gunma/
+    country: Gunma
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/saitama/
+    country: Saitama
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/chiba/
+    country: Chiba
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/tokyo/
+    country: Tokyo
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/kanagawa/
+    country: Kanagawa
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/niigata/
+    country: Niigata
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/toyama/
+    country: Toyama
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/ishikawa/
+    country: Ishikawa
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/fukui/
+    country: Fukui
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/yamanashi/
+    country: Yamanashi
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/nagano/
+    country: Nagano
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/gifu/
+    country: Gifu
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/shizuoka/
+    country: Shizuoka
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/aichi/
+    country: Aichi
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/mie/
+    country: Mie
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/shiga/
+    country: Shiga
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: Kyoto
+    url: https://www.asahi.com/area/kyoto/
+    country: Hokkaido
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/osaka/
+    country: Osaka
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/hyogo/
+    country: Hyogo
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/nara/
+    country: Nara
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/wakayama/
+    country: Wakayama
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/tottori/
+    country: Tottori
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/shimane/
+    country: Shimane
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/okayama/
+    country: Okayama
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/hiroshima/
+    country: Hiroshima
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/yamaguchi/
+    country: Yamaguchi
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/tokushima/
+    country: Tokushima
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/kagawa/
+    country: Kagawa
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/ehime/
+    country: Ehime
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/kochi/
+    country: Kochi
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/fukuoka/
+    country: Fukuoka
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/saga/
+    country: Saga
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/nagasaki/
+    country: Nagasaki
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/kumamoto/
+    country: Kumamoto
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/oita/
+    country: Oita
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/miyazaki/
+    country: Miyazaki
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/kagoshima/
+    country: Kagoshima
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg
+
+
+  - name: AsahiNews
+    url: https://www.asahi.com/area/okinawa/
+    country: Okinawa
+    credibility_score: 1
+    article_url_patterns:
+      - "/articles/"
+    image_url_patterns:
+      - "www.asahicom.jp/imgopt"
+    image_extensions:
+      - jpg

@@ -9,7 +9,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from dateutil import parser as date_parser
 import trafilatura
 
-from ingestion.sources import load_sources
+from ingestion.sources import load_sources, load_region_sources
 from playwright.async_api import async_playwright
 from api.routes.articles import generate_slug
 
@@ -478,7 +478,7 @@ async def scrape_videos() -> list[dict]:
                                 image_url = await img_el.get_attribute("src")
                        
                         # image_url = await img_el.get_attribute("src") if img_el else None
-
+                        
                         results.append({
                             "title": title,
                             "href": href,
@@ -491,14 +491,40 @@ async def scrape_videos() -> list[dict]:
                 # 🔹 NOW process articles (outside Playwright)
                 for item in results:
                     article = await extract_article(item["href"])
+                    iframe_src = ""
+                    async with async_playwright() as p:
+                        browser = await p.chromium.launch(
+                            headless=True,
+                            args=["--no-sandbox"]
+                        )
+                        context = await browser.new_context()
+                        page = await context.new_page()
 
+                        await page.goto(
+                            item["href"],
+                            wait_until="domcontentloaded",
+                            timeout=30000
+                        )
+
+                        await page.wait_for_selector("div.dailymotion-player-wrapper", timeout=15000)
+                        iframe_element = await page.query_selector('div.dailymotion-player-wrapper iframe')    
+                        if iframe_element:
+                            iframe_src = await iframe_element.get_attribute('src')
+                            print(iframe_src)  # Or process the iframe_src as needed
+                        else:
+                            print("Iframe not found")
+
+                        # Step 5: Close the browser
+                        await context.close()
+                        await browser.close()
                     video_article = {
                         "name": source["name"],
                         "country": source["country"],
                         "credibility_score": source["credibility_score"],
                         "image_url": item["image"],
-                        "title": item["title"],
+                        "title": article["title"],
                         "url": item["href"],
+                        "video_url": iframe_src,
                         "content": article.get("content", "") if article else "",
                         "publish_date": article.get("publish_date", "") if article else "",
                     }
@@ -602,4 +628,89 @@ async def scrape_all_sources() -> list[dict]:
                 )
                 continue
     logger.info(f"scrape_completed, article_count={len(all_articles)}")
+    return all_articles
+
+
+async def scrape_region_sources() -> list[dict]:
+    sources = load_region_sources()
+    all_articles: list[dict] = []
+
+    for source in sources:
+        logger.info("Scraping source: %s", source["name"])
+
+        try:
+            strategy = source.get("fetch_strategy", "httpx")
+
+            if strategy == "trafilatura":
+                html = trafilatura.fetch_url(source["url"])
+            else:
+                if source["name"] in ["CoinDesk", "cryptotimes"]:
+                    html = await fetch_html_browser(source["url"])
+                else:
+                    html = fetch_html(source["url"])
+            if not html:
+                logger.warning(
+                    "No HTML returned",
+                    source=source["name"],
+                    url=source["url"],
+                )
+                continue
+
+            article_urls = discover_article_urls(
+                html,
+                source["url"],
+                source["article_url_patterns"],
+            )
+
+        except Exception as e:
+            logger.error(
+                "Source scrape failed",
+                source=source["name"],
+                url=source["url"],
+                error=str(e),
+                exc_info=True,
+            )
+            continue
+
+        # ---- article loop ----
+        for url in article_urls:
+            try:
+                if is_url_restricted(url, source):
+                    continue
+                
+                article = await extract_article(url)
+                
+                if not article:
+                    continue
+                
+                if source["name"] == "CoinDesk":
+                    article_html = await fetch_html_browser(url)
+                else:
+                    article_html = fetch_html(url)
+                # print("image_url_patterns", source.get("image_url_patterns", []))
+                image_url = extract_image_from_imgs(
+                    html=article_html,
+                    base_url=url,
+                    image_patterns=source.get("image_url_patterns", []),
+                    parent_classes=source.get("image_parent_classes"),
+                    image_extensions=source.get("image_extensions"),
+                )
+                # print("parent_classes", source.get("image_parent_classes"))
+                print("image_url===>", image_url)
+                article["name"] = source["name"]
+                article["country"] = source["country"]
+                article["credibility_score"] = 0
+                article["image_url"] = image_url
+                
+                all_articles.append(article)
+
+            except Exception as e:
+                logger.warning(
+                    "Article extraction failed",
+                    source=source["name"],
+                    url=url,
+                    error=str(e),
+                )
+                continue
+    logger.info(f"region_scrape_completed, article_count={len(all_articles)}")
     return all_articles

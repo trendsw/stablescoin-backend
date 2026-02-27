@@ -25,6 +25,51 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 import uuid
+from tasks.twitter import get_related_tweets
+
+
+def process_twitter(article_id):
+    db = SessionLocal()
+    try:
+        article = db.get(Article, article_id)
+
+        if not article:
+            raise ValueError(f"Article {article_id} not found")
+
+        BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAACA97wEAAAAAhZIf5oFfzvlooat7b8IJwvVUWL4%3DnjE0VoKAVEJ1CR2DNFKYm9SNmrqqpQDhUSqR28Bxcn9N6bMMrL"
+    
+        ARTICLE_URL   = article.url
+        ARTICLE_TITLE = article.title
+        
+        # Optional: paste 2-5 strong claims from your scraped content
+        
+        
+        results = get_related_tweets(
+            article_url=ARTICLE_URL,
+            article_title=ARTICLE_TITLE,
+            bearer_token=BEARER_TOKEN,
+            max_results=25,
+            days_back=30,
+            min_likes=5,          # remove spam
+            only_verified=False,  # set True if you only want blue-check sources
+            extra_claims=None
+        )
+        
+        print(f"Found {len(results)} related X posts\n")
+        
+        for i, t in enumerate(results, 1):
+            print(f"{i:2d}. @{t['username']} {'✓' if t['verified'] else ''}")
+            print(f"   {t['content'][:280]}{'...' if len(t['content']) > 280 else ''}")
+            print(f"   {t['post_url']}")
+            print(f"   {t['created_at']} | ❤️ {t['likes']}  🔁 {t['retweets']}")
+            print("-" * 80)
+    except Exception as e:
+        db.rollback()
+        print("PROCESSING ARTICLE ERROR:", repr(e))
+        raise
+    finally:
+        db.close()
+
 
 @retry(
     stop=stop_after_attempt(3),
@@ -160,6 +205,19 @@ async def run_pipeline_async():
     print("article ids===>", article_ids)
     log.info("articles_saved", count=len(article_ids))
 
+    
+    for article_id in article_ids:
+        try:
+           log.info("processing_article_started", article_id=article_id)
+           cluster_id = process_article(article_id)
+           touched_clusters.add(cluster_id)
+        except Exception as e:
+            log.error(
+                "article_processing_failed",
+                article_id=article_id,
+                error=str(e)
+            )
+            
     touched_clusters: set[int] = set()
     
     for article_id in article_ids:
