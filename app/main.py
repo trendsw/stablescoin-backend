@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from api.routes import truth, articles, opinions
+from api.routes import truth, articles, opinions, region
 from core.scheduler import start_scheduler
 from core.logging import init_logging
 from db.init_db import init_db
@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(truth.router, prefix="/truth", tags=["Truth"])
     app.include_router(articles.router, tags=["Articles"])
     app.include_router(opinions.router, tags=["Opinions"])
-
+    app.include_router(region.router, tags=["Region"])
     @app.on_event("startup")
     async def startup():
         init_db()
