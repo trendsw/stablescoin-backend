@@ -58,6 +58,7 @@ def llm_contradiction_check(text1: str, text2: str) -> str:
 
     return result.get("relationship", "unrelated")
 
+
 def compare_claims(
     claims: list[Claim],
     semantic_threshold: float = 0.75,

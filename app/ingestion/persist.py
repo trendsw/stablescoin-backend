@@ -6,7 +6,7 @@ from sqlalchemy import select
 from api.routes.articles import generate_slug
 from db.firebase import db
 from firebase_admin import firestore
-from ml.claim_extraction import analyze_article
+from ml.claim_extraction import analyze_article1
 
 def save_articles(articles: list[dict]) -> list[int]:
     db = SessionLocal()
@@ -72,7 +72,7 @@ def save_region_articles(articles: list[dict]) -> list[int]:
         # 🚀 Skip if already exists
         if doc.exists:
             continue
-        analyze = analyze_article(a["title"], a["content"])
+        analyze = analyze_article1(a["title"], a["content"])
         publish_date = (
             datetime.fromisoformat(a["publish_date"])
             if a.get("publish_date")

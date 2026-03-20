@@ -1,9 +1,10 @@
 import asyncio
 from ingestion.scraper import scrape_all_sources, scrape_videos
 from ml.embeddings import embed
-from ml.claim_extraction import extract_claims, analyze_article, extract_info
-from ml.claim_comparison import compare_claims, semantic_group_claims, classify_group, save_supports, update_article_credibility
+from ml.claim_extraction import extract_claims, analyze_article_no_claim, extract_info
+from ml.claim_comparison import compare_claims, semantic_group_claims, classify_group, save_supports, update_article_credibility, llm_contradiction_check
 from ml.truth_engine import evaluate_truth
+from ml.llm import call_llm
 from core.logging import log
 from ml.services.cluster_registry import get_cluster_index
 from ml.services.topic_clustering import SIM_THRESHOLD, assign_topic_cluster
@@ -25,44 +26,242 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 import uuid
-from tasks.twitter import get_related_tweets
+from db.firebase import db as firebase_db
+from tasks.twitter import get_related_tweets, search_user_tweets, parse_tweets
+import httpx
+from fastapi import HTTPException
+import requests
+import re
+STOPWORDS = {
+    "a","an","the","and","or","but","if","while","with","to","from","of",
+    "in","on","at","for","by","after","before","latest","new"
+}
+X_SEARCH_URL = "https://api.twitter.com/2/tweets/search/recent"
+BEARER_TOKEN = os.getenv("X_API_KEY")
+
+def detect_stance(title: str, content: str, tweet_text: str):
+    system_prompt = """
+    You are a stance detection engine.
+
+    Compare the tweet with the news article.
+
+    Return strictly valid JSON in this format:
+
+    {
+      "stance": "SUPPORT" | "CONTRADICT" | "NEUTRAL",
+      "confidence": 0.0-1.0
+    }
+
+    No explanations.
+    JSON only.
+    """
+
+    user_text = f"""
+    News Article:
+    Title: {title}
+    Content: {content}
+
+    Tweet:
+    {tweet_text}
+    """
+
+    try:
+        result = call_llm(system_prompt, user_text)
+
+        stance = result.get("stance", "NEUTRAL")
+        confidence = float(result.get("confidence", 0.0))
+
+        # If invalid stance → fallback to NEUTRAL
+        if stance not in ["SUPPORT", "CONTRADICT", "NEUTRAL"]:
+            return {
+                "stance": "NEUTRAL",
+                "confidence": 0.0
+            }
+
+        return {
+            "stance": stance,
+            "confidence": round(confidence, 2)
+        }
+
+    except Exception:
+        # Any parsing / API / JSON error
+        return {
+            "stance": "NEUTRAL",
+            "confidence": 0.0
+        }
 
 
-def process_twitter(article_id):
+def build_query(title: str):
+
+    # remove punctuation except letters/numbers
+    cleaned = re.sub(r"[^\w\s]", " ", title)
+
+    words = cleaned.split()
+
+    keywords = []
+
+    for w in words:
+        if w.lower() not in STOPWORDS:
+            keywords.append(w)
+
+    keywords = keywords[:3]
+
+    query = " ".join(keywords)
+
+    # query += " -is:retweet lang:en"
+
+    return query
+
+def chunk_list(lst, size):
+    for i in range(0, len(lst), size):
+        yield lst[i:i + size]
+        
+async def process_twitter(article_id, title):
     db = SessionLocal()
     try:
         article = db.get(Article, article_id)
 
         if not article:
             raise ValueError(f"Article {article_id} not found")
-
-        BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAACA97wEAAAAAhZIf5oFfzvlooat7b8IJwvVUWL4%3DnjE0VoKAVEJ1CR2DNFKYm9SNmrqqpQDhUSqR28Bxcn9N6bMMrL"
+        
+        BEARER_TOKEN = os.getenv("X_API_KEY") # Paste your bearer token here
     
-        ARTICLE_URL   = article.url
-        ARTICLE_TITLE = article.title
+        ARTICLE_URL = article.url
+        ARTICLE_TITLE = title
+        ARTICLE_CONTENT = article.content  # NEW: Pull full content from DB for semantic similarity
         
-        # Optional: paste 2-5 strong claims from your scraped content
+        # Optional: Add claims if you extract them programmatically from content
+        CLAIMS = None  # e.g., extract_key_claims(ARTICLE_CONTENT) if you have such a func
         
+        # usernames = [           
+        #     "VitalikButerin",
+        #     "saylor",
+        #     "justinsuntron",
+        #     "APompliano",
+        #     "MMCrypto",
+        #     "Ashcryptoreal",
+        #     "balajis",
+        #     "elonmusk",
+        #     "cz_binance",
+        #     "nayibbukele",
+        #     "aantonop",
+        #     "CamiRusso",
+        #     "CathieDWood",
+        #     "ArthurHayes",
+        #     "RaoulGMI",
+        #     "Missteencrypto",
+        #     "Girlgone_Crypto",
+        #     "pierre_rochard",
+        #     "NickSzabo4",
+        #     "TySmithHQ",
+                       
+        # ]
         
-        results = get_related_tweets(
-            article_url=ARTICLE_URL,
-            article_title=ARTICLE_TITLE,
-            bearer_token=BEARER_TOKEN,
-            max_results=25,
-            days_back=30,
-            min_likes=5,          # remove spam
-            only_verified=False,  # set True if you only want blue-check sources
-            extra_claims=None
-        )
+        tweets = []
+        headers = {
+            "Authorization": f"Bearer {BEARER_TOKEN}"
+        }
+        # username_batches = list(chunk_list(usernames, 6))
         
-        print(f"Found {len(results)} related X posts\n")
+        # for batch in username_batches:
+
+        #     user_query = " OR ".join([f"from:{u}" for u in batch])
+
+        keyword_query = build_query(ARTICLE_TITLE)
+
+            # query = f"({keyword_query}) ({user_query}) -is:retweet lang:en"
+        query = f"({keyword_query}) -is:retweet lang:en"
+
+        params = {
+                "query": query,
+                "max_results": 10,
+                "tweet.fields": "created_at,public_metrics",
+                "expansions": "author_id",
+                "user.fields": "username,name"
+            }
+
+
+        response = requests.get(X_SEARCH_URL, headers=headers, params=params)
+
+        if response.status_code != 200:
+                raise Exception(response.text)
+
+        data = response.json()
+
+        users_map = {}
+        for u in data.get("includes", {}).get("users", []):
+                users_map[u["id"]] = {
+                    "username": u.get("username"),
+                    "name": u.get("name")
+                }
+                
+        for tweet in data.get("data", []):
+                author = users_map.get(tweet.get("author_id"), {})
+                tweet["username"] = author.get("username", "unknown")
+                tweet["name"] = author.get("name", "unknown")
+                tweets.append(tweet)
+            # if "data" in data:
+            #     tweets.extend(data["data"])
         
-        for i, t in enumerate(results, 1):
-            print(f"{i:2d}. @{t['username']} {'✓' if t['verified'] else ''}")
-            print(f"   {t['content'][:280]}{'...' if len(t['content']) > 280 else ''}")
-            print(f"   {t['post_url']}")
-            print(f"   {t['created_at']} | ❤️ {t['likes']}  🔁 {t['retweets']}")
+        print(f"article id {article_id}")
+        # return tweets
+        users_ref = firebase_db.collection("twitter_users")
+        
+        # results = get_related_tweets(
+        #     article_url="crypto.news",
+        #     article_title=ARTICLE_TITLE,
+        #     article_content=ARTICLE_CONTENT,
+        #     bearer_token=BEARER_TOKEN,
+        #     max_results=30,
+        #     days_back=7,
+        #     min_likes=2,
+        #     only_verified=False,
+        #     extra_claims=CLAIMS,
+        #     include_fact_checks=True,
+        #     min_similarity=0.3,
+        #     usernames=usernames,
+        # )
+        
+        # print(f"Found {len(results)} related X posts\n")
+        
+        for i, t in enumerate(tweets):
+            # print(f"{i:2d}. @{t['username']}")
+            print(f"{t['username']}")
+            print(f"   {t['text']}")
+            print(f"https://x.com/{t['username']}/status/{t['id']}")
+            post_url = f"https://x.com/{t['username']}/status/{t['id']}"
+            print(f"   {t['created_at']}")
             print("-" * 80)
+            query = users_ref.where("xuser_name", "==", t['username']).limit(1).stream()
+            user_doc = None
+            for doc in query:
+                user_doc = doc
+                break
+            if user_doc is None:
+                new_user_ref = users_ref.add({
+                    "username": t['username'],
+                    "name": t['name'],
+                })
+                user_id = new_user_ref[1].id
+                print("if new user ref===>", new_user_ref)
+            else:
+                user_id = user_doc.id
+                print("else user doc", user_doc)
+                
+            
+            posts_ref = firebase_db.collection("twitter_posts")
+            supporting = llm_contradiction_check(ARTICLE_TITLE, t['text'])
+            print("supporting=====>", supporting)
+            if supporting in ("supporting", "contradicting"):
+                post_ref = posts_ref.add({
+                    "username": t['username'],
+                    "content": t['text'],
+                    "post_url": post_url,
+                    "article_id": article_id,
+                    "supporting_type": supporting
+                })          
+            
+            
     except Exception as e:
         db.rollback()
         print("PROCESSING ARTICLE ERROR:", repr(e))
@@ -70,21 +269,22 @@ def process_twitter(article_id):
     finally:
         db.close()
 
-
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(min=1, max=10),
     reraise=True,
 )
-def process_article(article_id: int):
+async def process_article(article_id: int):
     db = SessionLocal()
     try:
         article = db.get(Article, article_id)
 
         if not article:
             raise ValueError(f"Article {article_id} not found")
-
-        analysis = analyze_article(article.title, article.content)
+        title = article.title
+        await process_twitter(article_id, title)
+        analysis = analyze_article_no_claim(article.title, article.content)
+        
         # ---- Assign article fields ----
         article.priority = analysis["priority"]
         article.category = analysis["category"]
@@ -93,23 +293,26 @@ def process_article(article_id: int):
         article.summary = analysis["summary"]
         article.title = analysis["new_title"]
         article.publish_date = datetime.now(ZoneInfo("Asia/Tokyo"))
-        
-        embedding = embed(article.content)
-        index = get_cluster_index()
-
-        cluster_id = assign_topic_cluster(article, embedding, index, db)
-
-        # claims_data = extract_claims(article.content)
-        claims_data = analysis.get("claims", [])
-        for c in claims_data:
-            db.add(Claim(
-                article_id=article.id,
-                claim_text=c["claim_text"],
-                claim_type=c["claim_type"],
-                sentiment=c["sentiment"],
-            ))
         db.commit()
-        return cluster_id
+        
+        
+        
+        # embedding = embed(article.content)
+        # index = get_cluster_index()
+
+        # cluster_id = assign_topic_cluster(article, embedding, index, db)
+
+        # # claims_data = extract_claims(article.content)
+        # claims_data = analysis.get("claims", [])
+        # for c in claims_data:
+        #     db.add(Claim(
+        #         article_id=article.id,
+        #         claim_text=c["claim_text"],
+        #         claim_type=c["claim_type"],
+        #         sentiment=c["sentiment"],
+        #     ))
+        
+        # return cluster_id
     except Exception as e:
         db.rollback()
         print("PROCESSING ARTICLE ERROR:", repr(e))
@@ -205,39 +408,49 @@ async def run_pipeline_async():
     print("article ids===>", article_ids)
     log.info("articles_saved", count=len(article_ids))
 
-               
-    touched_clusters: set[int] = set()
-    
     for article_id in article_ids:
         try:
             log.info("processing_article_started", article_id=article_id)
-            cluster_id = process_article(article_id)
-            touched_clusters.add(cluster_id)
+            await process_article(article_id)
+            
         except Exception as e:
             log.error(
                 "article_processing_failed",
                 article_id=article_id,
                 error=str(e)
-            )
+            )           
+    # touched_clusters: set[int] = set()
+    
+    # for article_id in article_ids:
+    #     try:
+    #         log.info("processing_article_started", article_id=article_id)
+    #         cluster_id = process_article(article_id)
+    #         touched_clusters.add(cluster_id)
+    #     except Exception as e:
+    #         log.error(
+    #             "article_processing_failed",
+    #             article_id=article_id,
+    #             error=str(e)
+    #         )
             
     #cluster_ids = get_all_cluster_ids()
     
-    log.info("evaluating_all_clusters", count=len(touched_clusters))
+    # log.info("evaluating_all_clusters", count=len(touched_clusters))
     
-    for cluster_id in touched_clusters:
-        try:
-            log.info("evaluating_cluster_started", cluster_id=cluster_id)
-            evaluate_cluster(cluster_id)
-        except Exception as e:
-            log.exception(
-            "cluster_evaluation_failed",
-            cluster_id=cluster_id
-            )
+    # for cluster_id in touched_clusters:
+    #     try:
+    #         log.info("evaluating_cluster_started", cluster_id=cluster_id)
+    #         evaluate_cluster(cluster_id)
+    #     except Exception as e:
+    #         log.exception(
+    #         "cluster_evaluation_failed",
+    #         cluster_id=cluster_id
+    #         )
 
-    log.info(
-        "pipeline_completed",
-        cluster_count=len(touched_clusters)
-    )   
+    # log.info(
+    #     "pipeline_completed",
+    #     cluster_count=len(touched_clusters)
+    # )   
     
 
 def run_pipeline():

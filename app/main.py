@@ -5,7 +5,7 @@ from core.scheduler import start_scheduler
 from core.logging import init_logging
 from db.init_db import init_db
 from dotenv import load_dotenv
-from ml.embeddings import load_embedding_model
+# from ml.embeddings import load_embedding_model
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup():
         init_db()
-        load_embedding_model()  
+        # load_embedding_model()  
         start_scheduler()
 
     return app

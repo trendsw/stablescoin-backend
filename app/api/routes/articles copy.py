@@ -5,32 +5,49 @@ from db.models import Article
 from db.session import get_db
 from db.schemas import ArticleOut, HomeArticlesResponse, PaginatedArticlesOut
 from urllib.parse import urlparse
-from typing import List, Optional, Dict
-from db.firebase import db as firebase_db
+from typing import List, Optional
+
 
 router = APIRouter()
-posts_ref = firebase_db.collection("twitter_posts")
 
 def top_article_per_valid_cluster_subquery(db: Session):
-    
-     # 1️⃣ Query Firebase for posts with 'supporting' or 'contradicting' types
-    posts_ref = firebase_db.collection("twitter_posts")
-    posts_query = posts_ref.where("supporting_type", "in", ["supporting", "contradicting"])
-
-    # Get the posts from Firebase and extract the article_ids
-    posts_snapshot = posts_query.stream()
-    article_ids_with_supporting_posts = {post.to_dict().get('article_id') for post in posts_snapshot}
-
-    # 2️⃣ Query PostgreSQL to get articles with matching article_ids
-    latest_article = (
-        db.query(Article)
-        .filter(Article.id.in_(article_ids_with_supporting_posts))  # Only include articles with supporting/contradicting posts
-        .filter(Article.image_url.isnot(None))  # Ensure the article has an image
-        .order_by(desc(Article.publish_date))  # Order by the latest publish date
-        .subquery()  # Return as a subquery for further use
+    # 1️⃣ Qualified clusters
+    qualified_clusters = (
+        db.query(
+            Article.topic_cluster_id.label("cluster_id")
+        )
+        .filter(Article.topic_cluster_id.isnot(None))
+        .group_by(Article.topic_cluster_id)
+        .having(func.count(Article.id) >= 3)
+        .having(func.count(distinct(Article.country)) >= 2)
+        .subquery()
     )
-    
-    return latest_article
+
+    # 2️⃣ Rank articles inside each cluster
+    ranked_articles = (
+        db.query(
+            Article,
+            func.row_number()
+            .over(
+                partition_by=Article.topic_cluster_id,
+                order_by=[
+                    desc(Article.credibility_score),
+                    desc(Article.publish_date),
+                ],
+            )
+            .label("rn")
+        )
+        .join(
+            qualified_clusters,
+            qualified_clusters.c.cluster_id == Article.topic_cluster_id
+        )
+        .filter(Article.credibility_score.isnot(None))
+        .filter(Article.credibility_score > 0)
+        .filter(Article.image_url.isnot(None))
+        .subquery()
+    )
+
+    return ranked_articles
 
 def latest_per_slug_subquery(db: Session):
     return (
@@ -138,9 +155,9 @@ def search_articles(
     
     articles = (
         db.query(RankedArticle)
-        # .filter(ranked_sq.c.rn == 1)
-        # .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
-        # .filter(RankedArticle.uhalisi_id != '')
+        .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .filter(
             or_(
                 RankedArticle.jp_title.ilike(f"%{search}%"),
@@ -168,8 +185,9 @@ def get_home_articles(
 
     articles = (
         db.query(RankedArticle)
-        # .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
-        # .filter(RankedArticle.uhalisi_id != '')
+        .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .order_by(
             RankedArticle.publish_date.desc(),
             RankedArticle.credibility_score.desc(),
@@ -177,7 +195,7 @@ def get_home_articles(
         .limit(15)
         .all()
     )
-    
+
     if not articles:
         raise HTTPException(status_code=404, detail="No articles found")
 
@@ -190,58 +208,6 @@ def get_home_articles(
         articleListItems=mapped[8:15],
     )
 
-@router.get("/posts/{article_id}/related", response_model=List[Dict])
-def get_related_posts_by_article(
-    article_id: int,
-    limit: int = 10,  # Optional: Limit the number of posts returned
-    db: Session = Depends(get_db),  # Database session dependency
-):
-    # 1️⃣ Query Firebase to get posts related to the article_id
-    posts_ref = firebase_db.collection("twitter_posts")
-    posts_query = posts_ref.where("article_id", "==", article_id).where("supporting_type", "in", ["supporting", "contradicting"])
-
-    posts_snapshot = posts_query.stream()
-
-    # Debugging: Check the data we are retrieving
-    print(f"Fetching posts for article_id: {article_id}")
-    
-    posts = []
-    for post in posts_snapshot:
-        post_data = post.to_dict()
-        print(f"Post data: {post_data}")  # Debugging: Print the post data
-        posts.append(post_data)
-    
-    # 2️⃣ If no posts were found
-    if not posts:
-        raise HTTPException(status_code=404, detail="No posts found for this article")
-    
-    # Grouping posts by supporting_type and username
-    grouped_posts = {"supporting": {}, "contradicting": {}}
-    
-    for post in posts:
-        supporting_type = post.get("supporting_type")
-        username = post.get("username")
-        
-        if supporting_type in grouped_posts:
-            if username not in grouped_posts[supporting_type]:
-                grouped_posts[supporting_type][username] = []
-            grouped_posts[supporting_type][username].append(post)
-    
-    # Limiting the posts per user
-    limited_grouped_posts = {}
-    for supporting_type, users_posts in grouped_posts.items():
-        limited_grouped_posts[supporting_type] = {}
-        for user, posts in users_posts.items():
-            limited_grouped_posts[supporting_type][user] = posts[:limit]  # Limit to `limit` posts per user
-
-    return [
-        {"supporting_type": supporting_type, "users": [
-            {"username": user, "posts": posts}
-            for user, posts in users_posts.items()
-        ]}
-        for supporting_type, users_posts in limited_grouped_posts.items()
-    ]
-
 @router.get("/articles/counts")
 def get_article_counts(db: Session = Depends(get_db)):
     # Priority counts: top, major, breaking
@@ -250,9 +216,9 @@ def get_article_counts(db: Session = Depends(get_db)):
     RankedArticle = aliased(Article, ranked_sq)
     priority_counts = (
         db.query(RankedArticle.priority, func.count(RankedArticle.id))
-        # .filter(ranked_sq.c.rn == 1)
-        # .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
-        # .filter(RankedArticle.uhalisi_id != '')
+        .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .group_by(RankedArticle.priority)
         .all()
     )
@@ -261,7 +227,7 @@ def get_article_counts(db: Session = Depends(get_db)):
     # Category counts
     category_counts = (
         db.query(RankedArticle.category, func.count(RankedArticle.id))
-        # .filter(ranked_sq.c.rn == 1)
+        .filter(ranked_sq.c.rn == 1)
         .group_by(RankedArticle.category)
         .all()
     )
@@ -286,10 +252,10 @@ def get_breaking_articles(
 
     articles = (
         db.query(RankedArticle)
-        # .filter(ranked_sq.c.rn == 1)
+        .filter(ranked_sq.c.rn == 1)
         .filter(RankedArticle.priority == "breaking")
-        # .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
-        # .filter(RankedArticle.uhalisi_id != '')
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
         .order_by(
             RankedArticle.publish_date.desc(),
             RankedArticle.credibility_score.desc(),
@@ -313,9 +279,9 @@ def get_articles(
 
     base_query = (
         db.query(RankedArticle)
-        # .filter(ranked_sq.c.rn == 1)
-        # .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
-        # .filter(RankedArticle.uhalisi_id != '')
+        .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
     )
 
     # Optional filters
@@ -380,9 +346,9 @@ def get_featured_article(
 
     query = (
         db.query(RankedArticle)
-        # .filter(ranked_sq.c.rn == 1)
-        # .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
-        # .filter(RankedArticle.uhalisi_id != '')
+        .filter(ranked_sq.c.rn == 1)
+        .filter(RankedArticle.uhalisi_id.isnot(None))  # Check for non-NULL
+        .filter(RankedArticle.uhalisi_id != '')
     )
 
     if category:
@@ -435,7 +401,7 @@ def get_cluster_related_articles(
     # --- 1️⃣ Base article (must be RankedArticle) ---
     base_article = (
         db.query(RankedArticle)
-        # .filter(ranked_sq.c.rn == 1)
+        .filter(ranked_sq.c.rn == 1)
         .filter(RankedArticle.slug == slug)
         .first()
     )
