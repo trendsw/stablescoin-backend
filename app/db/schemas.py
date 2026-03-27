@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict, Any
 from datetime import datetime
 
 class ArticleOut(BaseModel):
@@ -13,7 +13,8 @@ class ArticleOut(BaseModel):
     url: str
     summary: str
     country: str
-    uhalisi_id: str    
+    uhalisi_id: str
+    related_posts: List[Dict[str, Any]] = []
     class Config:
         from_attributes  = True
 

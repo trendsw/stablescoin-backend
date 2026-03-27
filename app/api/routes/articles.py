@@ -11,6 +11,49 @@ from db.firebase import db as firebase_db
 router = APIRouter()
 posts_ref = firebase_db.collection("twitter_posts")
 
+
+def fetch_related_posts(article_id: int, limit: int = 3):
+    posts_ref = firebase_db.collection("twitter_posts")
+
+    posts_query = (
+        posts_ref
+        .where("article_id", "==", article_id)
+        .where("supporting_type", "in", ["supporting", "contradicting"])
+    )
+
+    posts_snapshot = posts_query.stream()
+
+    posts = [post.to_dict() for post in posts_snapshot]
+
+    if not posts:
+        return []
+
+    grouped_posts = {"supporting": {}, "contradicting": {}}
+
+    for post in posts:
+        supporting_type = post.get("supporting_type")
+        username = post.get("username")
+
+        if supporting_type in grouped_posts:
+            grouped_posts[supporting_type].setdefault(username, []).append(post)
+
+    # limit per user
+    result = []
+    for supporting_type, users_posts in grouped_posts.items():
+        users_data = []
+        for user, posts in users_posts.items():
+            users_data.append({
+                "username": user,
+                "posts": posts[:limit]
+            })
+
+        result.append({
+            "supporting_type": supporting_type,
+            "users": users_data
+        })
+
+    return result
+
 def top_article_per_valid_cluster_subquery(db: Session):
     
      # 1️⃣ Query Firebase for posts with 'supporting' or 'contradicting' types
@@ -43,6 +86,7 @@ def latest_per_slug_subquery(db: Session):
     )
     
 def serialize_article(a: Article):
+    related_posts = fetch_related_posts(a.id)
     return {
         "id": a.id,
         "title": a.title,
@@ -54,10 +98,12 @@ def serialize_article(a: Article):
         "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
         "source": a.source,
         "summary": a.summary or "",
-        "uhalisi_id" : a.uhalisi_id or ""
+        "uhalisi_id" : a.uhalisi_id or "",
+        "related_posts" : related_posts,
     }
 
 def serialize_article_ja(a: Article):
+    related_posts = fetch_related_posts(a.id)
     return {
         "id": a.id,
         "title": a.jp_title,
@@ -70,7 +116,8 @@ def serialize_article_ja(a: Article):
         "source": a.source,
         "summary": a.summary or "",
         "credibilityScore": a.credibility_score,
-        "uhalisi_id" : a.uhalisi_id or ""
+        "uhalisi_id" : a.uhalisi_id or "",
+        "related_posts" : related_posts,
     }
     
 def generate_slug(url: str, title: str) -> str:
@@ -106,7 +153,7 @@ def map_article(article: Article, locale: str) -> ArticleOut:
     )
 
     # slug = generate_slug(article.url, title)
-
+    related_posts = fetch_related_posts(article.id)
     return ArticleOut(
         id=article.id,
         title=article.title,
@@ -118,7 +165,8 @@ def map_article(article: Article, locale: str) -> ArticleOut:
         date=article.publish_date.strftime("%d %b %Y %H:%M"),
         source = article.source,
         country= article.country,
-        uhalisi_id = article.uhalisi_id or ""
+        uhalisi_id = article.uhalisi_id or "",
+        related_posts=related_posts,
     )
 
 
@@ -359,7 +407,8 @@ def get_articles(
                 "date": a.publish_date.strftime("%d %b %Y %H:%M") if a.publish_date else None,
                 "source": a.source,
                 "country": a.country,
-                "uhalisi_id": a.uhalisi_id or ""
+                "uhalisi_id": a.uhalisi_id or "",
+                "related_posts": fetch_related_posts(a.id),
             }
             for a in articles
         ],
@@ -405,7 +454,7 @@ def get_featured_article(
 
     if not article:
         return None
-
+    related_posts = fetch_related_posts(article.id)
     return {
         "id": article.id,
         "slug": article.slug,
@@ -417,7 +466,8 @@ def get_featured_article(
         "date": article.publish_date.strftime("%d %b %Y %H:%M"),
         "source": article.source,
         "country": article.country,
-        "uhalisi_id": article.uhalisi_id or ""
+        "uhalisi_id": article.uhalisi_id or "",
+        "related_posts" : related_posts,
     }
 
 @router.get(

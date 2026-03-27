@@ -169,7 +169,7 @@ async def process_twitter(article_id, title):
 
         keyword_query = build_query(ARTICLE_TITLE)
 
-            # query = f"({keyword_query}) ({user_query}) -is:retweet lang:en"
+        # query = f"({keyword_query}) ({user_query}) -is:retweet lang:en"
         query = f"({keyword_query}) -is:retweet lang:en"
 
         params = {
@@ -177,7 +177,7 @@ async def process_twitter(article_id, title):
                 "max_results": 10,
                 "tweet.fields": "created_at,public_metrics",
                 "expansions": "author_id",
-                "user.fields": "username,name"
+                "user.fields": "username,name,profile_image_url"
             }
 
 
@@ -192,14 +192,25 @@ async def process_twitter(article_id, title):
         for u in data.get("includes", {}).get("users", []):
                 users_map[u["id"]] = {
                     "username": u.get("username"),
-                    "name": u.get("name")
+                    "name": u.get("name"),
+                    "avatar" : u.get("profile_image_url"),
+                    "profile_url" : f"https://twitter.com/{u.get('username')}"
                 }
                 
         for tweet in data.get("data", []):
                 author = users_map.get(tweet.get("author_id"), {})
-                tweet["username"] = author.get("username", "unknown")
-                tweet["name"] = author.get("name", "unknown")
-                tweets.append(tweet)
+                tweet_data = {
+                    "id": tweet.get("id"),
+                    "text": tweet.get("text"),
+                    "created_at": tweet.get("created_at"),
+                    "metrics": tweet.get("public_metrics"),
+                    "username": author.get("username", "unknown"),
+                    "name": author.get("name", "unknown"),
+                    "avatar": author.get("avatar"),
+                    "profile_url": author.get("profile_url"),
+                    "tweet_url": f"https://x.com/{author.get('username')}/status/{tweet.get('id')}"  # ✅ tweet link
+                }
+                tweets.append(tweet_data)
             # if "data" in data:
             #     tweets.extend(data["data"])
         
@@ -207,28 +218,14 @@ async def process_twitter(article_id, title):
         # return tweets
         users_ref = firebase_db.collection("twitter_users")
         
-        # results = get_related_tweets(
-        #     article_url="crypto.news",
-        #     article_title=ARTICLE_TITLE,
-        #     article_content=ARTICLE_CONTENT,
-        #     bearer_token=BEARER_TOKEN,
-        #     max_results=30,
-        #     days_back=7,
-        #     min_likes=2,
-        #     only_verified=False,
-        #     extra_claims=CLAIMS,
-        #     include_fact_checks=True,
-        #     min_similarity=0.3,
-        #     usernames=usernames,
-        # )
-        
-        # print(f"Found {len(results)} related X posts\n")
-        
+               
         for i, t in enumerate(tweets):
             # print(f"{i:2d}. @{t['username']}")
+            print(f"{t['avatar']}")
+            print(f"{t['profile_url']}")
             print(f"{t['username']}")
             print(f"   {t['text']}")
-            print(f"https://x.com/{t['username']}/status/{t['id']}")
+            print(f"tweet_url")
             post_url = f"https://x.com/{t['username']}/status/{t['id']}"
             print(f"   {t['created_at']}")
             print("-" * 80)
@@ -241,6 +238,8 @@ async def process_twitter(article_id, title):
                 new_user_ref = users_ref.add({
                     "username": t['username'],
                     "name": t['name'],
+                    "avatar" : t['avatar'],
+                    "profile_url" : t['profile_url'],
                 })
                 user_id = new_user_ref[1].id
                 print("if new user ref===>", new_user_ref)
@@ -254,9 +253,12 @@ async def process_twitter(article_id, title):
             print("supporting=====>", supporting)
             if supporting in ("supporting", "contradicting"):
                 post_ref = posts_ref.add({
+                    "name": t['name'],
                     "username": t['username'],
                     "content": t['text'],
                     "post_url": post_url,
+                    "avatar" : t['avatar'],
+                    "profile_url" : t['profile_url'],
                     "article_id": article_id,
                     "supporting_type": supporting
                 })          
