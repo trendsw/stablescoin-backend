@@ -19,6 +19,8 @@ def create_app() -> FastAPI:
     
     origins = [
         "https://stablescoin.vercel.app",
+        "https://dfs-stablescoin1.vercel.app/",
+        "https://www.dfs-stablescoin1.vercel.app/",
         "https://www.stablescoin.com",
         "https://stablescoin.com",
         "http://localhost",

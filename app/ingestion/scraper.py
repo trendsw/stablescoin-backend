@@ -288,11 +288,14 @@ def extract_image_from_imgs(
                 or img.get("data-lazy-src")
                 or img.get("data-original")
                 or img.get("src")
+                or img.get("srcset")
             )
             if not src:
                 continue
-
+            print("original src===>", src)
             src = normalize_image_url(src, base_url)
+            
+            print("normalized src===>", src)
 
             if not is_valid_image_url(
                 src,
@@ -695,7 +698,14 @@ async def scrape_region_sources() -> list[dict]:
                     parent_classes=source.get("image_parent_classes"),
                     image_extensions=source.get("image_extensions"),
                 )
+                
                 # print("parent_classes", source.get("image_parent_classes"))
+                if image_url:
+                    image_url = (
+                        image_url
+                        .replace("hw120", "hd640")
+                        .replace("comm_L", "hd640")
+                    )
                 print("image_url===>", image_url)
                 article["name"] = source["name"]
                 article["country"] = source["country"]

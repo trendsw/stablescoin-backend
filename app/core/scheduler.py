@@ -44,15 +44,15 @@ def start_scheduler():
     )
 
     # Job 2
-    # scheduler.add_job(
-    #     run_region_pipeline,
-    #     "interval",
-    #     minutes=SCRAPE_INTERVAL_MINUTES,
-    #     max_instances=1,
-    #     coalesce=True,
-    #     id="another_job",
-    #     replace_existing=True
-    # )
+    scheduler.add_job(
+        run_region_pipeline,
+        "interval",
+        minutes=SCRAPE_INTERVAL_MINUTES,
+        max_instances=1,
+        coalesce=True,
+        id="another_job",
+        replace_existing=True
+    )
 
     scheduler.start()
     _scheduler_started = True
